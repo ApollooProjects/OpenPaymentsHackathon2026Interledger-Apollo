@@ -1,0 +1,33 @@
+# Secretos (NUNCA al repo)
+.env
+.env.*
+!.env.example
+*.key
+private.key
+keys/
+secrets/
+
+# Dependencias y builds
+node_modules/
+dist/
+build/
+.next/
+coverage/
+
+# Datos locales
+*.sqlite
+*.db
+data/local/
+
+# Material interno del equipo / agentes
+CLAUDE.md
+CLAUDE.local.md
+AGENTS.md
+.claude/
+
+# Sistema / editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log
