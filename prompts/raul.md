@@ -225,7 +225,7 @@ Integra la capa 3 (C3) de La Cajita para dejarla lista para la demo. C3 es P1: r
 Queda terminado cuando main tenga todo C3, el flujo P1 completo haya pasado en el testnet y el tablero refleje el resultado.
 
 --- background ---
-El usuario es Raúl, no Sofía, aunque el correo de la cuenta diga sofia@…. Las ramas van como raul/<tarea>. Los commits no llevan ninguna atribución a IA (lo exige el CLAUDE.md global).
+Las ramas van como raul/<tarea>. Los commits no llevan ninguna atribución a IA (lo exige el CLAUDE.md global).
 
 Repo: /home/raul/Documents/OpenPayments Hackathon/repo, en main 2f00c1c. Esta sesión dejó corriendo el backend con npm start desde backend/ (puerto 3001; el túnel cloudflared ya estaba activo). Si hay que reiniciarlo, detén el proceso de node src/app/server.js que escucha en 3001 y vuelve a lanzar npm start.
 
@@ -256,7 +256,7 @@ Hazte cargo de la tarea C4.4 (prueba y merge de la capa 4) de La Cajita. Raúl e
 Queda terminado cuando main tenga C4 completo, la prueba haya pasado en el testnet y el tablero refleje el resultado.
 
 --- background ---
-El usuario es Raúl, no Sofía, aunque el correo de la cuenta diga sofia@…. Las ramas van como raul/<tarea>. Los commits no llevan ninguna atribución a IA (lo exige el CLAUDE.md global).
+Las ramas van como raul/<tarea>. Los commits no llevan ninguna atribución a IA (lo exige el CLAUDE.md global).
 
 Repo: /home/raul/Documents/OpenPayments Hackathon/repo, main en 2f00c1c o más nuevo. Haz git pull --rebase antes de empezar. Otra sesión está integrando C3 a la vez ("Integrar la capa 3 (C3) en main"): coordina antes de tocar los mismos archivos y vuelve a traer main antes de cada merge.
 
@@ -318,7 +318,7 @@ Busca cosas como:
 Entregable: development/raul-huecos-demo.md con cada hallazgo (qué pasa, por qué importa para la demo, arreglo propuesto, esfuerzo estimado) ordenado por impacto/esfuerzo, marcando los que caben antes del cierre. No cambies código: solo el informe. Al final, resume los 5 primeros.
 
 --- background ---
-El usuario es Raúl, no Sofía, aunque el correo de la cuenta diga sofia@…. La entrega de la hackathon cierra el sábado 17 de octubre a las 11:00, así que solo sirven mejoras chicas y seguras. Ya se descartó el login real por rol: si propones algo de perfiles, que sea un selector de perfil sin contraseña.
+La entrega de la hackathon cierra el sábado 17 de octubre a las 11:00, así que solo sirven mejoras chicas y seguras. Ya se descartó el login real por rol: si propones algo de perfiles, que sea un selector de perfil sin contraseña.
 
 main tiene C1–C4 integradas: C3 y C4 probadas, y C2 probada en el testnet. El backend corre en localhost:3001, expuesto por https://cajita.serenqo.app, y no debe reiniciarse.
 
@@ -352,7 +352,7 @@ Cómo trabajar:
 Queda terminado cuando funcione en móvil y escritorio y no rompa los flujos P1, P2 y P3 ni las pestañas actuales. Al final, sube la rama y pregúntale a Raúl antes de fusionarla en main.
 
 --- background ---
-El usuario es Raúl, no Sofía, aunque el correo de la cuenta diga sofia@…. La entrega cierra el sábado 17 de octubre a las 11:00: el cambio tiene que ser chico, seguro y no romper la demo. Raúl descartó el login real por rol porque no hay tiempo; acordamos un selector de perfil sin contraseña.
+La entrega cierra el sábado 17 de octubre a las 11:00: el cambio tiene que ser chico, seguro y no romper la demo. Raúl descartó el login real por rol porque no hay tiempo; acordamos un selector de perfil sin contraseña.
 
 main tiene C1–C4 integradas y probadas. El backend de la demo corre en localhost:3001, expuesto por https://cajita.serenqo.app; no se reinicia sin preguntar.
 
@@ -381,7 +381,7 @@ Las aprobaciones en la Test Wallet las hace Raúl: dale cada URL y espera. Si al
 Entregable: una tabla de resultados al final de development/raul-huecos-demo.md (o en una sección «Prueba testnet 17-oct») y un resumen de lo que falló y se arregló.
 
 --- background ---
-El usuario es Raúl, no Sofía, aunque el correo de la cuenta diga sofia@…. La entrega cierra hoy, sábado 17 de octubre, a las 11:00, y main tiene que poder hacer la demo.
+La entrega cierra hoy, sábado 17 de octubre, a las 11:00, y main tiene que poder hacer la demo.
 
 Contexto de esta noche:
 - Se arregló la rotación de tokens: el testnet responde 403 «Inactive Token», no 401, cuando vence un access token de 10 min.
@@ -458,7 +458,7 @@ Cómo trabajar:
 Queda terminado cuando cada perfil pueda completar su flujo principal sin explicación previa, en móvil y escritorio, y las pruebas (npm test) pasen. Entrega una lista corta de antes y después con capturas. Al final, sube la rama y pregúntale a Raúl antes de fusionarla en main.
 
 --- background ---
-El usuario es Raúl, no Sofía, aunque el correo de la cuenta diga sofia@…. La entrega cierra hoy, sábado 17 de octubre, a las 11:00: el cambio debe ser seguro y no romper la demo. Si el tiempo apremia, prioriza los flujos que se muestran en el pitch: el pago con QR del cliente, la vendedora viendo su reparto, Celular/SMS y el Cajero con PIN, y la remesa del remitente.
+La entrega cierra hoy, sábado 17 de octubre, a las 11:00: el cambio debe ser seguro y no romper la demo. Si el tiempo apremia, prioriza los flujos que se muestran en el pitch: el pago con QR del cliente, la vendedora viendo su reparto, Celular/SMS y el Cajero con PIN, y la remesa del remitente.
 
 main está en 86105be o más nuevo, con C1–C4, el selector de perfil, el rediseño accesible de Angélica, los arreglos de huecos y el vínculo celular↔cédula. El backend de la demo corre en localhost:3001, expuesto por https://cajita.serenqo.app, y lo administra esta otra sesión: no lo reinicies.
 
@@ -558,7 +558,7 @@ Cómo trabajar:
 Queda terminado cuando los dos casos funcionen de punta a punta en mock, `npm test` pase y no se rompan P1, P2 ni P3. Al final, sube la rama, fusiónala en main y súbela (Raúl suele pedir merge y push directo), y avisa que hay que reiniciar el backend de :3001.
 
 --- background ---
-El usuario es Raúl, no Sofía, aunque el correo de la cuenta diga sofia@…. La entrega cierra hoy, sábado 17 de octubre, a las 11:00: el cambio debe ser seguro y no romper la demo. Si algo no cabe, prioriza que los dos QR funcionen.
+La entrega cierra hoy, sábado 17 de octubre, a las 11:00: el cambio debe ser seguro y no romper la demo. Si algo no cabe, prioriza que los dos QR funcionen.
 
 main está en 0267771 o más nuevo, con C1–C4, el selector de perfil (frontend/js/perfil.js: perfiles con wallets fijas del testnet), el rediseño accesible, el UX nuevo y la remesa enviar/recibir.
 
@@ -655,7 +655,7 @@ Restricciones:
 Queda terminado cuando el contrato funcione de punta a punta con curl (código → entrar → /yo → billetera o efectivo → resumen → qr) y las pruebas pasen. Al final, sube la rama y fusiónala en main si todo pasa. Avisa en tu reporte qué cambió del contrato, si algo cambió, y actualiza el archivo del contrato.
 
 --- background ---
-El usuario es Raúl, no Sofía, aunque el correo de la cuenta diga sofia@…. La hackathon Open Payments cierra hoy, sábado 17 de octubre, a las 11:00. Raúl quiere, aparte de la interfaz de demo, una app que parezca producto: registro, sesión y cada quien ve lo suyo, con el mismo backend. Si a las 9:00 no está probada, no se fusiona.
+La hackathon Open Payments cierra hoy, sábado 17 de octubre, a las 11:00. Raúl quiere, aparte de la interfaz de demo, una app que parezca producto: registro, sesión y cada quien ve lo suyo, con el mismo backend. Si a las 9:00 no está probada, no se fusiona.
 
 main está en b2a9bdb o más nuevo, con C1–C4. Ya existen:
 - QR de transferencia a cuenta y a efectivo (qr.js, recibir.js);
@@ -699,7 +699,7 @@ Restricciones:
 Queda terminado cuando todas las pantallas funcionen en móvil (375 px) y escritorio, primero con la API falsa y después con la real si A ya está. Toma capturas de cada pantalla. Al final, sube la rama y fusiónala en main si todo pasa.
 
 --- background ---
-El usuario es Raúl, no Sofía, aunque el correo de la cuenta diga sofia@…. La hackathon Open Payments cierra hoy, sábado 17 de octubre, a las 11:00. Raúl quiere que la app no parezca demo sino producto: registro, sesión y cada quien ve lo suyo. La interfaz actual queda para la demo en vivo del pitch, con perfiles de ejemplo, Cajero y Celular.
+La hackathon Open Payments cierra hoy, sábado 17 de octubre, a las 11:00. Raúl quiere que la app no parezca demo sino producto: registro, sesión y cada quien ve lo suyo. La interfaz actual queda para la demo en vivo del pitch, con perfiles de ejemplo, Cajero y Celular.
 
 Producto: La Cajita, pagos con QR y remesas para personas con o sin cuenta de banco, sobre Open Payments en el testnet de Interledger.
 - Con cuenta, el dinero va directo a su wallet.
@@ -737,7 +737,7 @@ Restricciones:
 Queda terminado cuando el flujo completo y cada error funcionen en mock, en móvil y en tablet, con capturas. Al final, sube la rama y fusiónala en main si todo pasa.
 
 --- background ---
-El usuario es Raúl, no Sofía, aunque el correo de la cuenta diga sofia@…. La hackathon Open Payments cierra hoy, sábado 17 de octubre, a las 11:00. Raúl quiere separar la experiencia de producto de la demo:
+La hackathon Open Payments cierra hoy, sábado 17 de octubre, a las 11:00. Raúl quiere separar la experiencia de producto de la demo:
 - la app del usuario va en app/ (sesión B);
 - el backend de cuentas va en backend/ (sesión A);
 - el corresponsal tiene su propia app (esta sesión).
@@ -802,7 +802,7 @@ Restricciones:
 Queda terminado cuando cada endpoint funcione con curl usando la sesión (cookie de /auth/entrar; el código sale de la tabla sms en modo de prueba) y las pruebas pasen. Al final, actualiza el contrato si algo cambió, sube la rama y fusiónala en main si todo pasa. Avisa que hay que reiniciar :3001.
 
 --- background ---
-El usuario es Raúl, no Sofía, aunque el correo de la cuenta diga sofia@…. La hackathon Open Payments cierra hoy, sábado 17 de octubre, a las 11:00; si a las 9:00 no está probado, no se fusiona.
+La hackathon Open Payments cierra hoy, sábado 17 de octubre, a las 11:00; si a las 9:00 no está probado, no se fusiona.
 
 La app producto (app/) ya está en la raíz de https://cajita.serenqo.app, y la demo del pitch en /demoenvivo. Ya están en main el backend de cuentas (cuentas.js, routes/auth.js, routes/yo.js con /yo, /yo/billetera, /yo/efectivo, /yo/resumen y /yo/qr) y el timeout de 20 s del cliente de Open Payments. main está en 20edac9 o más nuevo.
 
@@ -841,7 +841,7 @@ Restricciones:
 Queda terminado cuando todo funcione a 375 px y en escritorio contra la API real de D, en mock, con capturas, y sin respuestas de ejemplo en el código. Al final, sube la rama y fusiónala en main si todo pasa.
 
 --- background ---
-El usuario es Raúl, no Sofía, aunque el correo de la cuenta diga sofia@…. La hackathon Open Payments cierra hoy, sábado 17 de octubre, a las 11:00; si a las 9:00 no está probado, no se fusiona.
+La hackathon Open Payments cierra hoy, sábado 17 de octubre, a las 11:00; si a las 9:00 no está probado, no se fusiona.
 
 La app producto ya tiene registro por celular con código SMS, inicio, cobrar, pagar, enviar, retirar, movimientos y perfil, y está en la raíz del dominio. La demo del pitch, con las funciones de P1 bajo nombres específicos (vendedor, proveedor, meseros), sigue en /demoenvivo y no se toca.
 
