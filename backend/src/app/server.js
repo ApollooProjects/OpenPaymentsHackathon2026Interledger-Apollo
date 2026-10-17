@@ -18,6 +18,8 @@ import './conexiones.js';
 import { rutasSmsReal } from './smsReal.js';
 import { mensajeParaUsuario } from './errores.js';
 import { aWalletUrl } from './wallet.js';
+import { rutasAuth } from './routes/auth.js';
+import { rutasYo } from './routes/yo.js';
 
 const raiz = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 
@@ -29,9 +31,11 @@ const app = express();
 app.use(express.json({ verify: (req, res, buf) => { req.cuerpoCrudo = buf; } }));
 // no-cache: el navegador (y Cloudflare) revalidan con el ETag en cada carga, así nadie se queda con JS viejo
 // después de un despliegue; si el archivo no cambió, la respuesta es un 304 sin cuerpo.
-app.use(express.static(path.join(raiz, 'frontend'), {
-    setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache')
-}));
+const sinCache = { setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache') };
+app.use(express.static(path.join(raiz, 'frontend'), sinCache));
+// App producto: la del usuario (/app) y la del corresponsal (/corresponsal). Si la carpeta no existe, da 404.
+app.use('/app', express.static(path.join(raiz, 'app'), sinCache));
+app.use('/corresponsal', express.static(path.join(raiz, 'corresponsal'), sinCache));
 app.use(rutasQr);
 
 app.get('/salud', (req, res) => {
@@ -48,6 +52,8 @@ app.use(rutasCobros);
 app.use(rutasSms);
 app.use(rutasSmsReal);
 app.use(rutasSinCuenta);
+app.use(rutasAuth);
+app.use(rutasYo);
 
 // Aviso de llegada (H9): SMS a quien no tiene cuenta cuando su cobro en la Custodia se confirma.
 onPagoCompletado(avisarLlegada);

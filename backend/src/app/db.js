@@ -8,4 +8,5 @@ const carpetaDatos = path.join(raiz, 'data');
 
 mkdirSync(carpetaDatos, { recursive: true });
 
-export const db = new DatabaseSync(path.join(carpetaDatos, 'cajita.sqlite'));
+// CAJITA_DB (opcional): otra base, p. ej. ':memory:' en las pruebas o una copia para probar sin tocar la de la demo.
+export const db = new DatabaseSync(process.env.CAJITA_DB || path.join(carpetaDatos, 'cajita.sqlite'));

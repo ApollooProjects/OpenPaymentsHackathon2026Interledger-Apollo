@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="es-CO">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#123d36">
+    <meta name="description" content="Punto aliado La Cajita: entrega de retiros en efectivo con PIN y cédula.">
+    <title>Punto aliado · La Cajita</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23123d36'/%3E%3Cpath d='M8 13h16v11H8z' fill='none' stroke='%23f2c14e' stroke-width='2.5' stroke-linejoin='round'/%3E%3Cpath d='M6 9h20v4H6z' fill='%23f2c14e'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+    <a class="saltar" href="#principal">Ir al retiro</a>
+
+    <header class="barra">
+        <div class="marca">
+            <svg class="marca-logo" viewBox="0 0 32 32" aria-hidden="true">
+                <rect width="32" height="32" rx="8" />
+                <path class="tapa" d="M6 9h20v4H6z" />
+                <path class="caja" d="M8 13h16v11H8z" />
+            </svg>
+            <div>
+                <p class="marca-nombre">La Cajita</p>
+                <p class="marca-punto">Punto aliado · Retiros en efectivo</p>
+            </div>
+        </div>
+        <div class="total-dia" aria-live="polite">
+            <span class="total-etiqueta">Entregado hoy</span>
+            <strong class="total-valor" data-total-dia>$ 0</strong>
+        </div>
+    </header>
+
+    <div class="lienzo">
+        <main id="principal" class="principal" tabindex="-1">
+
+            <!-- Paso 1: cédula + PIN -->
+            <section class="tarjeta" data-paso="datos" aria-labelledby="titulo-datos">
+                <p class="paso">Nuevo retiro</p>
+                <h1 id="titulo-datos">Pide la cédula y el PIN</h1>
+                <p class="ayuda">El PIN de 8 dígitos le llegó a la persona por SMS. Revisa que la cédula sea la del documento físico.</p>
+
+                <form class="formulario" novalidate data-formulario>
+                    <div class="campo">
+                        <label for="cedula">Cédula de quien retira</label>
+                        <input id="cedula" name="cedula" type="text" inputmode="numeric" autocomplete="off"
+                               enterkeyhint="next" maxlength="13" placeholder="Ej. 1020459183" aria-describedby="cedula-error" required>
+                        <p class="campo-error" id="cedula-error" data-error-de="cedula" hidden></p>
+                    </div>
+                    <div class="campo">
+                        <label for="pin">PIN del SMS</label>
+                        <input id="pin" name="pin" type="text" inputmode="numeric" autocomplete="one-time-code"
+                               enterkeyhint="go" maxlength="9" placeholder="0000-0000" class="entrada-pin"
+                               aria-describedby="pin-ayuda pin-error" required>
+                        <p class="campo-ayuda" id="pin-ayuda">8 dígitos, con o sin guion.</p>
+                        <p class="campo-error" id="pin-error" data-error-de="pin" hidden></p>
+                    </div>
+                    <button class="boton boton-principal" type="submit" data-revisar>Revisar retiro</button>
+                </form>
+            </section>
+
+            <!-- Mientras la Custodia le paga al punto -->
+            <section class="tarjeta tarjeta-espera" data-paso="revisando" aria-labelledby="titulo-revisando" hidden>
+                <div class="girando" aria-hidden="true"></div>
+                <h2 id="titulo-revisando" tabindex="-1">Confirmando el pago…</h2>
+                <p class="ayuda" data-texto-espera>La Custodia le está pagando a este punto por Open Payments.</p>
+                <p class="aviso aviso-alto"><strong>Todavía no entregues dinero.</strong></p>
+            </section>
+
+            <!-- Paso 2: pago confirmado, entregar -->
+            <section class="tarjeta tarjeta-entrega" data-paso="entregar" aria-labelledby="titulo-entregar" hidden>
+                <p class="sello">✓ Pago confirmado por Open Payments</p>
+                <h2 id="titulo-entregar" tabindex="-1">
+                    <span class="entrega-verbo">Entrega</span>
+                    <span class="entrega-monto" data-monto>$ 0</span>
+                    <span class="entrega-verbo">en efectivo</span>
+                </h2>
+                <dl class="datos-persona">
+                    <div><dt>Cédula</dt><dd data-cedula-mascara>••••</dd></div>
+                    <div><dt>Es</dt><dd>Todo su saldo</dd></div>
+                </dl>
+                <p class="ayuda">Cuenta el dinero frente a la persona y luego confirma.</p>
+                <button class="boton boton-exito" type="button" data-ya-entregue>Ya entregué el efectivo</button>
+            </section>
+
+            <!-- Paso 3: comprobante -->
+            <section class="tarjeta" data-paso="comprobante" aria-labelledby="titulo-comprobante" hidden>
+                <p class="paso">Comprobante</p>
+                <h2 id="titulo-comprobante" tabindex="-1">Retiro entregado</h2>
+                <p class="comprobante-monto" data-comp-monto>$ 0</p>
+                <dl class="comprobante">
+                    <div><dt>Hora</dt><dd data-comp-hora></dd></div>
+                    <div><dt>Cédula</dt><dd data-comp-cedula></dd></div>
+                    <div><dt>ID del retiro</dt><dd><code data-comp-retiro></code></dd></div>
+                    <div><dt>Pago Open Payments<br><small>Custodia → Corresponsal</small></dt><dd><code data-comp-pago></code></dd></div>
+                    <div><dt>Cobro de este punto</dt><dd><code data-comp-cobro></code></dd></div>
+                </dl>
+                <button class="boton boton-principal" type="button" data-siguiente>Atender al siguiente cliente</button>
+            </section>
+
+            <!-- Errores -->
+            <section class="tarjeta tarjeta-error" data-paso="error" aria-labelledby="titulo-error" hidden>
+                <p class="aviso aviso-alto" data-no-entregues><strong>No entregues dinero.</strong></p>
+                <h2 id="titulo-error" tabindex="-1" data-error-titulo>No se pudo validar</h2>
+                <p class="error-que-hacer" data-error-accion></p>
+                <p class="error-detalle" data-error-detalle></p>
+                <div class="acciones">
+                    <button class="boton boton-principal" type="button" data-error-primario>Corregir datos</button>
+                    <button class="boton boton-secundario" type="button" data-error-secundario>Nuevo retiro</button>
+                </div>
+            </section>
+
+            <p class="lector" aria-live="assertive" data-anuncio></p>
+        </main>
+
+        <aside class="historial" aria-labelledby="titulo-historial">
+            <div class="historial-cabeza">
+                <h2 id="titulo-historial">Entregados hoy</h2>
+                <span class="historial-cuenta" data-cuenta>0 retiros</span>
+            </div>
+            <ol class="historial-lista" data-historial></ol>
+            <p class="historial-vacio" data-historial-vacio>Aún no has entregado retiros hoy.</p>
+            <p class="historial-nota">Se guarda solo en este navegador.</p>
+        </aside>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>
