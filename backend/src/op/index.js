@@ -2,9 +2,10 @@ import * as mock from './mock.js';
 import * as incoming from './incoming.js';
 import * as outgoing from './outgoing.js';
 import * as grants from './grants.js';
+import * as token from './token.js';
 import * as client from './client.js';
 
-const real = { obtenerWallet: client.obtenerWallet, ...incoming, ...outgoing, ...grants };
+const real = { obtenerWallet: client.obtenerWallet, ...incoming, ...outgoing, ...grants, ...token };
 
 // Se decide en cada llamada: los imports de ESM corren antes de que server.js cargue el .env.
 function implementacion(nombre) {
@@ -19,6 +20,8 @@ export const crearCobro = (...args) => implementacion('crearCobro')(...args);
 export const consultarCobro = (...args) => implementacion('consultarCobro')(...args);
 export const pagar = (...args) => implementacion('pagar')(...args);
 export const consultarPago = (...args) => implementacion('consultarPago')(...args);
+export const listarCobros = (...args) => implementacion('listarCobros')(...args);
+export const rotar = (...args) => implementacion('rotar')(...args);
 export const pedirPermiso = (...args) => implementacion('pedirPermiso')(...args);
 export const continuarPermiso = (...args) => implementacion('continuarPermiso')(...args);
 export const verificarHash = (...args) => implementacion('verificarHash')(...args);

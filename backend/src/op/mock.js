@@ -28,6 +28,22 @@ export async function crearCobro({ walletUrl, monto, metadata = {}, expiresAt } 
     return { id, walletUrl };
 }
 
+export async function listarCobros({ walletUrl, cedula } = {}) {
+    return [...cobros.entries()]
+        .filter(([, cobro]) => cobro.walletUrl === walletUrl)
+        .filter(([, cobro]) => cedula === undefined || cobro.metadata?.cedula === cedula)
+        .map(([id, cobro]) => ({
+            id,
+            recibido: { value: cobro.recibido.toString(), ...MONEDA },
+            completo: cobro.completo,
+            metadata: cobro.metadata
+        }));
+}
+
+export async function rotar({ token, manageUrl }) {
+    return { token: `mock-token-${randomUUID()}`, manageUrl: manageUrl ?? `${BASE}/token/${randomUUID()}` };
+}
+
 export async function consultarCobro(id) {
     const cobro = cobros.get(id);
     if (!cobro) throw new Error(`[mock] cobro no encontrado: ${id}`);
