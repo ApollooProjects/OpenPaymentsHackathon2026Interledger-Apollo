@@ -119,7 +119,7 @@ export async function resumenReparto(id) {
     const reparto = store.obtenerReparto(id);
     if (!reparto) return null;
 
-    const ventas = store.pagosDelQr(reparto.qrId).filter((pago) => pago.estado === 'completado');
+    const ventas = store.pagosDelReparto(reparto.id).filter((pago) => pago.estado === 'completado');
     const parteDe = (pago, walletUrl) => pago.plan.destinos
         .filter((d) => d.walletUrl === walletUrl)
         .reduce((t, d) => t + BigInt(d.monto.value), 0n);

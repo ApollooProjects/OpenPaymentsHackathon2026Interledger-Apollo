@@ -135,7 +135,13 @@ alAbrirPestana('cliente', async (params) => {
         return;
     }
 
-    titulo.textContent = `Pagarle a ${qrActual.vendedor}`;
+    if (qrActual.usado) {
+        titulo.textContent = 'Este QR ya se pagó: sirve para un solo pago.';
+        return;
+    }
+    titulo.textContent = qrActual.descripcion
+        ? `Pagarle a ${qrActual.vendedor} · ${qrActual.descripcion}`
+        : `Pagarle a ${qrActual.vendedor}`;
     if (qrActual.monto) {
         campoMonto.value = formatearMonto(qrActual.monto);
         campoMonto.readOnly = true;

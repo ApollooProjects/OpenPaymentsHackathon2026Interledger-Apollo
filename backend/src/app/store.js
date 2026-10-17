@@ -70,6 +70,15 @@ db.exec(`
     );
 `);
 
+// QR personalizados (C3.5): a qué reparto pertenecen y su descripción. Se agregan sin borrar bases existentes.
+for (const columna of ['reparto_id TEXT', 'descripcion TEXT']) {
+    try {
+        db.exec(`ALTER TABLE qrs ADD COLUMN ${columna}`);
+    } catch (error) {
+        if (!/duplicate column/i.test(error.message)) throw error;
+    }
+}
+
 const ahora = () => new Date().toISOString();
 
 function filaAQr(fila) {
@@ -82,7 +91,9 @@ function filaAQr(fila) {
         monto: fila.monto,
         meseros: JSON.parse(fila.meseros),
         vigenteHasta: fila.vigente_hasta,
-        propina: fila.propina === 1
+        propina: fila.propina === 1,
+        repartoId: fila.reparto_id ?? null,
+        descripcion: fila.descripcion ?? null
     };
 }
 
@@ -100,14 +111,19 @@ function filaAPago(fila) {
     };
 }
 
-export function guardarQr({ id, vendedor, walletUrl, tipo = 'estatico', monto = null, meseros = [], vigenteHasta = null, propina = false }) {
+export function guardarQr({
+    id, vendedor, walletUrl, tipo = 'estatico', monto = null, meseros = [], vigenteHasta = null, propina = false,
+    repartoId = null, descripcion = null
+}) {
     db.prepare(`
-        INSERT INTO qrs (id, vendedor, wallet_url, tipo, monto, meseros, vigente_hasta, propina, creado)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO qrs (id, vendedor, wallet_url, tipo, monto, meseros, vigente_hasta, propina, reparto_id, descripcion, creado)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
             vendedor = excluded.vendedor, wallet_url = excluded.wallet_url, tipo = excluded.tipo, monto = excluded.monto,
-            meseros = excluded.meseros, vigente_hasta = excluded.vigente_hasta, propina = excluded.propina
-    `).run(id, vendedor, walletUrl, tipo, monto, JSON.stringify(meseros), vigenteHasta, propina ? 1 : 0, ahora());
+            meseros = excluded.meseros, vigente_hasta = excluded.vigente_hasta, propina = excluded.propina,
+            reparto_id = excluded.reparto_id, descripcion = excluded.descripcion
+    `).run(id, vendedor, walletUrl, tipo, monto, JSON.stringify(meseros), vigenteHasta, propina ? 1 : 0,
+        repartoId, descripcion, ahora());
     return obtenerQr(id);
 }
 
@@ -211,8 +227,12 @@ export function obtenerReparto(id) {
     return filaAReparto(db.prepare('SELECT * FROM repartos WHERE id = ?').get(id));
 }
 
+// El QR estático del reparto, o un QR personalizado generado para ese reparto (C3.5).
 export function repartoDelQr(qrId) {
-    return filaAReparto(db.prepare('SELECT * FROM repartos WHERE qr_id = ?').get(qrId));
+    return filaAReparto(db.prepare(`
+        SELECT r.* FROM repartos r
+        WHERE r.qr_id = ? OR r.id = (SELECT reparto_id FROM qrs WHERE id = ?)
+    `).get(qrId, qrId));
 }
 
 export function cambiarCajita(id, { cajitaId, cajitaVence }) {
@@ -222,6 +242,18 @@ export function cambiarCajita(id, { cajitaId, cajitaVence }) {
 
 export function pagosDelQr(qrId) {
     return db.prepare("SELECT * FROM pagos WHERE json_extract(plan, '$.origen.qrId') = ? ORDER BY creado").all(qrId).map(filaAPago);
+}
+
+// Ventas de un reparto por su QR estático y por todos sus QR personalizados.
+export function pagosDelReparto(repartoId) {
+    return db.prepare(`
+        SELECT p.* FROM pagos p
+        WHERE json_extract(p.plan, '$.origen.qrId') IN (
+            SELECT qr_id FROM repartos WHERE id = ?
+            UNION SELECT id FROM qrs WHERE reparto_id = ?
+        )
+        ORDER BY p.creado
+    `).all(repartoId, repartoId).map(filaAPago);
 }
 
 // datos: lo que pide el grant según su estado (pendiente: nonces y continuación; activo: token, manageUrl, continuación).

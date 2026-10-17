@@ -4,6 +4,7 @@ import * as motor from '../motor.js';
 import * as op from '../../op/index.js';
 import { destinoDelQr } from '../sinCuenta.js';
 import { destinosDeVenta, repartoDelQr } from '../repartos.js';
+import { qrUsado } from '../qr.js';
 
 export const rutasPagos = Router();
 
@@ -33,7 +34,9 @@ async function qrPublico(qr) {
         monto,
         meseros: qr.meseros,
         vigenteHasta: qr.vigenteHasta,
-        propina: qr.propina
+        propina: qr.propina,
+        descripcion: qr.descripcion,
+        usado: qrUsado(qr)
     };
 }
 
@@ -50,6 +53,7 @@ rutasPagos.post('/pagar/:qrId', async (req, res) => {
     const qr = store.obtenerQr(req.params.qrId);
     if (!qr) return res.status(404).json({ error: 'QR no encontrado' });
     if (vencido(qr)) return res.status(410).json({ error: 'Este QR ya venció' });
+    if (qrUsado(qr)) return res.status(409).json({ error: 'Este QR ya se pagó (sirve para un solo pago)' });
 
     const pagador = normalizarWallet(req.body?.pagador);
     if (!pagador.startsWith('https://')) return res.status(400).json({ error: 'Falta la wallet de quien paga' });
