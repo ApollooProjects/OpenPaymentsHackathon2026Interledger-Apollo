@@ -43,12 +43,5 @@
 ## Archivos con poca o ninguna IA
 - Ninguno sin IA. El que tiene **menos** IA es `backend/src/op/**`: ahí la IA hizo funciones puntuales que pidió y revisó el equipo, no el módulo completo de una sola vez.
 
-## Lo que hizo el equipo
-- **Producto:** definir los tres productos (reparto, cobro con QR + SMS, remesas), que la cajita exista solo para el vendedor sin cuenta, que todo el dinero pase por Open Payments, el retiro del saldo total y separar la app de producto de la demo.
-- **Pruebas reales:** pagos con dinero de prueba desde el celular, aprobación de cada consentimiento en la Test Wallet (la IA nunca escribió contraseñas), remesas, retiros en el corresponsal y SMS reales con un Android como pasarela.
-- **Infraestructura:** las wallets de la Test Wallet, el túnel de Cloudflare, la pasarela de SMS y los secretos del `.env`.
-- **Revisión:** aprobar cada merge, rechazar entregas que solo funcionaban con datos simulados, pedir la causa raíz antes de cambiar código y detectar cuando una sesión de IA se salía del encargo.
-- Verificación de todo el código sugerido por la IA contra el testnet de Open Payments.
-
 ## Registro de prompts
 Los prompts literales están en [`prompts/`](prompts/), un archivo por integrante: [`angelica.md`](prompts/angelica.md), [`raul.md`](prompts/raul.md), [`sofia.md`](prompts/sofia.md) y [`valentina.md`](prompts/valentina.md).
