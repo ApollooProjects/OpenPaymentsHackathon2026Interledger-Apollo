@@ -293,3 +293,9 @@ export function repartoDelUsuario(usuarioId, repartoId) {
 export function nombreDeReparto(repartoId) {
     return db.prepare('SELECT nombre FROM repartos_usuario WHERE reparto_id = ?').get(repartoId)?.nombre ?? null;
 }
+
+// Las reglas del reparto sin importar de quién es (para poner los nombres de las personas en el pago).
+export function reglasDeReparto(repartoId) {
+    const fila = db.prepare('SELECT reglas FROM repartos_usuario WHERE reparto_id = ?').get(repartoId);
+    return fila ? JSON.parse(fila.reglas) : null;
+}
