@@ -7,6 +7,7 @@ import { destinosDeVenta, repartoDelQr } from '../repartos.js';
 import { qrUsado } from '../qr.js';
 import { mensajeParaUsuario } from '../errores.js';
 import { aWalletUrl, esWalletUrl } from '../wallet.js';
+import { reglasDeReparto } from '../cuentas.js';
 
 export const rutasPagos = Router();
 
@@ -41,6 +42,16 @@ async function qrPublico(qr) {
     };
 }
 
+// Los meseros salen como «Mesero 1/2»: si la persona les puso nombre al crear el reparto, se usa ese.
+export function conNombresDePersonas(destinos, repartoId) {
+    const personas = reglasDeReparto(repartoId)?.compartir?.personas ?? [];
+    return destinos.map((d) => {
+        if (d.rol !== 'mesero') return d;
+        const nombre = String(personas.find((p) => aWalletUrl(String(p.wallet ?? '')) === d.walletUrl)?.nombre ?? '').trim();
+        return nombre ? { ...d, nombre: nombre.slice(0, 60) } : d;
+    });
+}
+
 const vencido = (qr) => qr.vigenteHasta && new Date(qr.vigenteHasta) < new Date();
 
 rutasPagos.get('/qr/:qrId', async (req, res) => {
@@ -73,6 +84,7 @@ rutasPagos.post('/pagar/:qrId', async (req, res) => {
         console.error(`POST /pagar/${qr.id}:`, error);
         return res.status(400).json({ error: mensajeParaUsuario(error, 'pago') });
     }
+    if (reparto) destinos = conNombresDePersonas(destinos, reparto.id);
 
     // Con pagos rápidos vigentes devuelve { pagoId, estado } (sin consentimiento); si no, { pagoId, redirectUrl }.
     try {

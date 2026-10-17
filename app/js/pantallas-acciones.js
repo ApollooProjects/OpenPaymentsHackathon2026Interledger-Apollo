@@ -189,7 +189,20 @@ function seguirPago({ ir }, respuesta, ventana) {
 
 async function confirmarPago(ctx, qrId) {
     const { raiz, api, usuario, vigente } = ctx;
-    const qr = await api.verQr(qrId);
+    let qr;
+    try {
+        qr = await api.verQr(qrId);
+    } catch (error) {
+        // Un QR vencido (410) o ya usado (409) no se arregla reintentando: se dice claro y se ofrece volver.
+        if (error.status !== 410 && error.status !== 409) throw error;
+        if (!vigente()) return;
+        raiz.innerHTML = `
+            <div class="encabezado">${atras('#/pagar')}<h1>${error.status === 410 ? 'Este QR ya venció' : 'Este QR ya se pagó'}</h1></div>
+            <div class="vacio"><div class="ico-grande">${icono('alerta')}</div>
+                <p class="suave">${error.status === 410 ? 'Pídele al comercio un QR nuevo para pagar.' : 'Sirve para un solo pago. Pídele al comercio un QR nuevo.'}</p>
+                <a class="boton secundario" href="#/pagar">Volver</a></div>`;
+        return;
+    }
     // Pagos con un toque solo con la billetera propia (el permiso queda a nombre de esa billetera).
     const toque = usuario.wallet ? await unToque.estado(api, usuario) : null;
     if (!vigente()) return;
@@ -218,7 +231,7 @@ async function confirmarPago(ctx, qrId) {
                 <div class="campo">
                     <label for="pagador">Pagas desde tu billetera</label>
                     <input class="entrada" id="pagador" autocomplete="off" autocapitalize="off" spellcheck="false" value="${esc(aDolarIlp(billeteraPagadora(usuario)))}" placeholder="$ilp.interledger-test.dev/tu-nombre" ${usuario.wallet ? 'readonly' : ''}>
-                    <span class="ayuda">${usuario.wallet ? 'Tu billetera te pedirá autorizar el pago.' : 'Recibes en efectivo: para pagar necesitas una billetera digital.'}</span>
+                    <span class="ayuda" id="ayuda-pagador">${usuario.wallet ? 'Tu billetera te pedirá autorizar el pago.' : 'Recibes en efectivo: para pagar necesitas una billetera digital.'}</span>
                 </div>
                 <dl class="datos">
                     <div><dt>Llega a</dt><dd>${qr.destino === 'efectivo' ? 'Efectivo, a su cédula' : 'Su billetera'}</dd></div>
@@ -234,6 +247,9 @@ async function confirmarPago(ctx, qrId) {
     const pintarToque = (e) => {
         const zona = raiz.querySelector('#toque');
         if (!zona || !e) return;
+        // Con un toque activo no se autoriza en la billetera: se quita la ayuda que dice lo contrario.
+        const ayuda = raiz.querySelector('#ayuda-pagador');
+        if (ayuda) ayuda.hidden = Boolean(e.activo);
         zona.innerHTML = e.activo
             ? `<div class="aviso info" style="margin-top:0">${icono('rayo')}<p><strong>Pagas con un toque</strong>Sin autorizar en tu billetera. Te quedan ${esc(dinero(e.disponible))} esta semana.</p></div>`
             : `<button class="fila oferta" type="button" id="activar-toque">
