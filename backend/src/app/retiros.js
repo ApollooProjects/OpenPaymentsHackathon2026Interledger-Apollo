@@ -253,6 +253,7 @@ export async function validar({ pin, cedula }) {
         return {
             ok: true,
             estado: 'entregado',
+            retiroId: retiro.id,
             monto: retiro.monto,
             incomingPayment: actual.cobroId,
             outgoingPayment: actual.pagoOpId ?? null
