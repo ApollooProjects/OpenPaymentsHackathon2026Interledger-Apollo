@@ -55,17 +55,26 @@ async function identificar({ cedula, celular }) {
     return { cedula: soloDigitos(meta.cedula), celular: meta.celular ?? celular ?? null, cobros: propios };
 }
 
-function retirado(cedula) {
-    return store.retirosDe(cedula)
-        .filter((r) => r.estado === 'entregado' || r.estado === 'pagando')
+// Lo retirado se cuenta en el testnet (cobros del Corresponsal con esa cédula), igual que lo recibido en la Custodia:
+// así el saldo es el mismo en cualquier máquina que corra el backend, aunque cada una tenga su propia base local.
+// Se suman también los retiros locales entregados o en camino cuyo dinero no aparece ahí (en camino, o retiros
+// anteriores a guardar la cédula en el cobro del Corresponsal).
+async function retirado(cedula) {
+    const { corresponsal } = wallets();
+    const cobros = await op.listarCobros({ walletUrl: corresponsal, cedula });
+    const recibidoPorCobro = new Map(cobros.map((cobro) => [cobro.id, BigInt(cobro.recibido.value)]));
+    const enTestnet = [...recibidoPorCobro.values()].reduce((total, valor) => total + valor, 0n);
+    const soloLocal = store.retirosDe(cedula)
+        .filter((r) => (r.estado === 'entregado' || r.estado === 'pagando') && !recibidoPorCobro.get(r.cobroId))
         .reduce((total, r) => total + BigInt(r.monto.value), 0n);
+    return enTestnet + soloLocal;
 }
 
 async function calcularSaldo(persona) {
     const { custodia } = wallets();
     const wallet = await op.obtenerWallet(custodia);
     const recibido = persona.cobros.reduce((total, cobro) => total + BigInt(cobro.recibido.value), 0n);
-    const disponible = recibido - retirado(persona.cedula);
+    const disponible = recibido - (await retirado(persona.cedula));
     return { value: (disponible > 0n ? disponible : 0n).toString(), assetCode: wallet.assetCode, assetScale: wallet.assetScale };
 }
 
@@ -97,7 +106,7 @@ export async function solicitar({ cedula, celular }) {
         walletUrl: corresponsal,
         monto: { value: monto.value },
         expiresAt: vence,
-        metadata: { retiroId }
+        metadata: { retiroId, cedula: persona.cedula }
     });
 
     const digitos = String(randomInt(0, 100_000_000)).padStart(8, '0');
