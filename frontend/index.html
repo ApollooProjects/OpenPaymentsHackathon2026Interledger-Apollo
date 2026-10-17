@@ -132,11 +132,12 @@
             .pestanas a::before { width: 20px; height: 20px; }
             .pestanas a:hover { color: var(--texto); background: var(--superficie-suave); }
             .pestanas a[aria-current="page"]:hover { color: var(--azul); background: var(--azul-suave); }
+            .barra .saludo { flex-direction: row; align-items: center; gap: 0.75rem; }
         }
 
         /* Selector de perfil («Entrar como…»). */
         .perfiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 0.75rem; margin-bottom: 1.5rem; }
-        .perfiles button[type=button] { display: block; min-height: 96px; margin: 0; padding: 1rem 1.1rem; text-align: left; border-radius: 16px; border: 1.5px solid var(--borde); box-shadow: var(--sombra); }
+        .perfiles button[type=button] { display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; min-height: 96px; margin: 0; padding: 1rem 1.1rem; text-align: left; border-radius: 16px; border: 1.5px solid var(--borde); box-shadow: var(--sombra); }
         .perfiles button[type=button]:hover { border-color: var(--azul); background: var(--azul-suave); }
         .perfiles strong { display: block; font-size: 1.15rem; color: var(--texto); }
         .perfiles small { display: block; margin-top: 0.25rem; font-size: 0.9rem; font-weight: 400; line-height: 1.4; color: var(--texto-suave); }
@@ -179,7 +180,8 @@
         #cliente [data-total]:empty { display: none; }
         #recibo [data-estado] { font-size: 1.25rem; font-weight: 700; margin-bottom: 0.25rem; }
         #recibo [data-total] { font-size: 2.4rem; font-weight: 700; letter-spacing: -0.02em; margin: 0.25rem 0 0.75rem; }
-        #recibo [data-destinos] { margin: 0; padding-left: 1.2rem; font-size: 1.05rem; }
+        #recibo [data-destinos] { margin: 0; padding-left: 0; font-size: 1.05rem; }
+        #recibo [data-destinos] li { list-style: none; }
         #recibo > .tarjeta ~ p { max-width: 720px; font-size: 0.95rem; color: var(--texto-suave); }
         #recibo > details { max-width: 720px; padding: 0.75rem 1.25rem; border: 1px solid var(--borde); border-radius: 16px; background: var(--superficie); }
         #recibo > details summary { min-height: 44px; display: flex; align-items: center; font-weight: 600; color: var(--azul); }
@@ -209,6 +211,108 @@
         .telefono fieldset { margin: 0; }
         .telefono fieldset input { margin-bottom: 8px; }
 
+        /* Formularios de a un paso (js/pasos.js): «Paso X de N» en texto, no solo con color. */
+        .progreso-pasos { margin-bottom: 1.25rem; scroll-margin-top: 90px; }
+        .paso-actual { margin: 0 0 0.5rem; }
+        .paso-actual span { display: block; font-size: 0.9rem; font-weight: 600; color: var(--texto-suave); }
+        .paso-actual strong { display: block; font-size: 1.25rem; color: var(--texto); }
+        .progreso-pasos ol { display: flex; gap: 6px; margin: 0; padding: 0; }
+        .progreso-pasos li { flex: 1; height: 6px; list-style: none; margin: 0; border-radius: 3px; background: var(--borde); }
+        .progreso-pasos li.hecho, .progreso-pasos li.actual { background: var(--azul); }
+        .navegacion-pasos { display: flex; flex-direction: column-reverse; gap: 0.75rem; margin-top: 0.5rem; }
+        .navegacion-pasos button { margin: 0; }
+        @media (min-width: 600px) {
+            .navegacion-pasos { flex-direction: row; }
+            .navegacion-pasos button { flex: 2; }
+            .navegacion-pasos button.secondary { flex: 1; }
+        }
+        .opciones label span strong { display: block; }
+        .opciones label span small { margin: 0.15rem 0 0; }
+        .aviso-error {
+            padding: 0.9rem 1.1rem; border-radius: 12px; font-size: 1rem; font-weight: 500;
+            border: 1px solid #F5C2C2; background: var(--error-suave); color: var(--texto);
+        }
+
+        /* Pantallas de la vendedora y los cobros. */
+        .pequeno { display: block; font-size: 0.95rem; color: var(--texto-suave); margin: 0.4rem 0 0.75rem; }
+        .exito { color: var(--exito); font-weight: 600; }
+        .cifra .detalle-cifra { display: block; font-size: 1rem; color: var(--texto-suave); }
+        .bloque-proveedor { padding-top: 1rem; margin-bottom: 1rem; border-top: 1px solid var(--borde); }
+        .bloque-proveedor p { margin-bottom: 0.25rem; }
+        .pin-activo { padding: 0.9rem 1.1rem; border-radius: 12px; background: var(--azul-suave); font-weight: 500; }
+        [data-aviso-retiro][data-ok] { border-color: #A7E3C9; background: var(--exito-suave); }
+        [data-aviso-retiro] > * { display: block; margin-bottom: 0.35rem; }
+        [data-aviso-retiro] a { display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; }
+
+        /* Pagar: monto con signo $, billetera conocida en una línea y guía sin QR. */
+        .campo-pesos { position: relative; display: block; }
+        .campo-pesos::before { content: '$'; position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); margin-top: -0.5rem; font-size: 1.2rem; font-weight: 600; color: var(--texto-suave); pointer-events: none; }
+        .campo-pesos input { padding-left: 2.2rem !important; font-size: 1.35rem !important; font-weight: 600; }
+        details.billetera { margin-bottom: 1rem; border: 0; padding: 0; }
+        details.billetera > summary {
+            display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; min-height: 52px; padding: 0.5rem 1rem;
+            border: 1.5px dashed var(--borde-campo); border-radius: 12px; background: var(--superficie-suave); color: var(--texto); font-size: 1rem; list-style: none;
+        }
+        details.billetera > summary::-webkit-details-marker { display: none; }
+        details.billetera > summary::after { display: none !important; }
+        details.billetera > summary strong { overflow-wrap: anywhere; }
+        details.billetera .cambiar { flex: none; color: var(--azul); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+        details.billetera[open] > summary { display: none; }
+        .vacio-guia { border-left: 6px solid var(--azul); }
+        .pasos-guia { margin: 0.5rem 0 0; padding-left: 1.4rem; }
+        .pasos-guia li { margin-bottom: 0.4rem; }
+
+        /* Recibo: confirmación grande, con texto y borde de color. */
+        .comprobante[data-final] { border-left-width: 6px; }
+        .comprobante[data-final="completado"] { border-left-color: var(--exito); }
+        .comprobante[data-final="completado"] [data-estado] { color: var(--exito); }
+        .comprobante[data-final="fallido"], .comprobante[data-final="rechazado"] { border-left-color: var(--error); }
+        .comprobante[data-final="fallido"] [data-estado], .comprobante[data-final="rechazado"] [data-estado] { color: var(--error); }
+        .comprobante[data-final="parcial"] { border-left-color: var(--atencion); }
+        .boton-enlace {
+            display: flex; width: 100%; align-items: center; justify-content: center; min-height: 56px; margin-top: 1rem; padding: 0 1rem;
+            border-radius: 12px; background: var(--azul); color: #FFFFFF !important; font-weight: 600; font-size: 1.1rem; text-decoration: none;
+        }
+        .boton-enlace:hover { background: var(--azul-hover); }
+
+        /* Enviar dinero: resumen antes de enviar. */
+        .cuentas { display: grid; gap: 0.75rem; margin: 0 0 1rem; }
+        .cuentas div { padding: 0.75rem 1rem; border-radius: 12px; background: var(--superficie-suave); border: 1px solid var(--borde); }
+        .cuentas dt { font-size: 0.95rem; font-weight: 500; color: var(--texto-suave); }
+        .cuentas dd { margin: 0; font-size: 1.7rem; font-weight: 700; letter-spacing: -0.02em; color: var(--texto); }
+        .nota-centro { margin: 0.75rem 0 0; text-align: center; font-size: 0.9rem; color: var(--texto-suave); }
+
+        /* Selector de perfil y herramientas: rol visible como etiqueta. */
+        .perfiles .rol { display: inline-block; margin-bottom: 0.35rem; padding: 0.1rem 0.6rem; border-radius: 999px; background: var(--azul-suave); color: var(--azul); font-size: 0.85rem; font-weight: 600; }
+        .tarjeta-enlace {
+            display: block; min-height: 88px; padding: 1rem 1.1rem; border-radius: 16px; border: 1.5px solid var(--borde); background: var(--superficie);
+            box-shadow: var(--sombra); color: var(--texto); text-decoration: none;
+        }
+        .tarjeta-enlace:hover { border-color: var(--azul); background: var(--azul-suave); }
+        .tarjeta-enlace strong { display: block; font-size: 1.1rem; }
+        .tarjeta-enlace small { display: block; margin-top: 0.25rem; font-size: 0.9rem; line-height: 1.4; color: var(--texto-suave); }
+        .saludo { display: flex; flex-direction: column; align-items: flex-end; }
+        .saludo span { display: block; }
+        .herramientas { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; column-gap: 0.25rem; }
+        .saludo a, .herramientas a { display: inline-flex; align-items: center; min-height: 44px; }
+        .herramientas a { padding: 0 0.75rem; }
+
+        /* Cajero: resultado con indicación de qué hacer. */
+        [data-resultado] small { display: block; margin-top: 0.4rem; font-size: 0.9rem; font-weight: 400; color: var(--texto-suave); }
+        [data-resultado][data-entregado="true"] span { font-size: 1.3rem; }
+        [data-resultado][data-entregado="espera"] { border-color: #BFD0F7; background: var(--azul-suave); }
+
+        /* Iconos SVG (js/iconos.js) en vez de emojis. */
+        .icono { display: inline-block; width: 1.15em; height: 1.15em; margin-right: 0.35em; vertical-align: -0.2em; flex: none;
+            fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+        .icono-ok { color: var(--exito); }
+        .icono-error { color: var(--error); }
+        .icono-aviso { color: var(--atencion); }
+        .icono-espera, .icono-llave { color: var(--azul); }
+        .icono-rapido { color: #B45309; }
+        button .icono, .boton-enlace .icono { color: currentColor; }
+        .tarjeta-enlace .icono { color: var(--azul); }
+
         @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
     </style>
 </head>
@@ -234,13 +338,19 @@
     <main class="contenedor">
         <section id="perfil" hidden>
             <h2>Entrar como…</h2>
-            <p class="ayuda">Perfiles de la demo, sin contraseña. Quien no tiene cuenta no se registra: todo le llega por SMS (mira la herramienta Celular).</p>
+            <p class="ayuda">Toca una tarjeta para entrar. Es una demo: no hay contraseña. Quien no tiene cuenta no se registra; todo le llega por mensaje de texto.</p>
             <div class="perfiles" data-perfiles></div>
+            <h3>Herramientas de la demo</h3>
+            <div class="perfiles herramientas-demo">
+                <a href="#celular" class="tarjeta-enlace"><strong>📱 Celular</strong><small>Así ve los mensajes de texto alguien que no tiene la app: su saldo y su PIN.</small></a>
+                <a href="#cajero" class="tarjeta-enlace"><strong>🏪 Cajero (corresponsal)</strong><small>Entrega el efectivo a quien trae su cédula y su PIN.</small></a>
+            </div>
         </section>
         <section id="cobros" hidden>
             <h2>Mis cobros</h2>
+            <p class="ayuda" data-ayuda-cobros>Aquí ves el dinero que te llega a tu billetera. Se actualiza solo.</p>
             <article class="tarjeta angosto">
-                <p class="rotulo">Te han llegado</p>
+                <p class="rotulo">En total te han llegado</p>
                 <p><strong data-total>$ 0</strong></p>
                 <p><small data-cuantos></small></p>
             </article>
@@ -249,6 +359,7 @@
                 <div data-lista-deudas></div>
             </div>
             <div class="tarjeta angosto">
+                <h3>Últimos pagos</h3>
                 <ul data-movimientos></ul>
             </div>
             <p data-aviso class="angosto" role="alert" hidden></p>
@@ -256,12 +367,20 @@
         <section id="cliente" hidden>
             <h2>Pagar</h2>
             <p data-vendedor>Escanea el QR del vendedor para pagar.</p>
+            <article class="tarjeta angosto vacio-guia" data-sin-qr hidden>
+                <p data-sin-qr-motivo><strong>Para pagar necesitas el código QR del puesto.</strong></p>
+                <ol class="pasos-guia">
+                    <li>Pídele al vendedor que te muestre su código QR.</li>
+                    <li>Abre la cámara de tu celular y apúntale al código.</li>
+                    <li>Toca el enlace que aparece: se abre esta pantalla con el nombre del vendedor.</li>
+                </ol>
+            </article>
             <form class="dos-columnas" onsubmit="event.preventDefault()" hidden>
                 <div class="tarjeta">
                     <label>
                         ¿Cuánto vas a pagar?
-                        <small>Solo números. Ejemplo: 3000</small>
-                        <input name="monto" inputmode="decimal" autocomplete="off" required>
+                        <small>Solo números, sin puntos. Ejemplo: 3000</small>
+                        <span class="campo-pesos"><input name="monto" inputmode="decimal" autocomplete="off" required></span>
                     </label>
                     <fieldset data-propina hidden>
                         <legend>¿Quieres dejar propina para los meseros?</legend>
@@ -273,11 +392,14 @@
                         </div>
                         <input name="propinaOtra" inputmode="decimal" placeholder="Ejemplo: 1000" aria-label="¿Cuánto de propina?" hidden>
                     </fieldset>
-                    <label>
-                        Tu billetera
-                        <small>La dirección de tu billetera. Ejemplo: https://ilp.interledger-test.dev/maria</small>
-                        <input name="pagador" type="text" inputmode="url" spellcheck="false" autocapitalize="off" autocomplete="off" required>
-                    </label>
+                    <details class="billetera" data-billetera open>
+                        <summary><span>Pagas desde <strong data-billetera-corta>tu billetera</strong></span> <span class="cambiar">Cambiar</span></summary>
+                        <label>
+                            Tu billetera
+                            <small>La dirección de tu cuenta. Ejemplo: https://ilp.interledger-test.dev/maria</small>
+                            <input name="pagador" type="text" inputmode="url" spellcheck="false" autocapitalize="off" autocomplete="off" required>
+                        </label>
+                    </details>
                     <label class="interruptor" data-activar-rapidos>
                         <input type="checkbox" name="pagosRapidos" role="switch">
                         <span>Pagos rápidos: apruebas una sola vez hasta <span data-tope></span> por semana y después pagas con un solo toque.</span>
@@ -287,7 +409,7 @@
                     <p data-aviso role="alert" hidden></p>
                     <p data-total aria-live="polite"></p>
                     <button type="submit">Pagar</button>
-                    <p class="nota"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Al tocar «Pagar», tu billetera te pedirá confirmar.</p>
+                    <p class="nota"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Al tocar «Pagar», se abre tu billetera para que confirmes. Luego vuelves aquí y ves tu recibo.</p>
                 </aside>
             </form>
             <article class="tarjeta" data-rapidos hidden>
@@ -298,97 +420,115 @@
         <section id="recibo" hidden>
             <h2>Recibo</h2>
             <p class="ayuda">Aquí ves si tu pago llegó.</p>
-            <div class="tarjeta angosto">
+            <div class="tarjeta angosto comprobante" data-comprobante>
                 <p data-estado role="status">Todavía no hay un pago para mostrar.</p>
                 <h3 data-total></h3>
+                <p class="rotulo" data-reparto-titulo hidden>Así se repartió tu pago, solo:</p>
                 <ul data-destinos></ul>
+                <p class="pequeno" data-sin-pago>Cuando pagues con un código QR o envíes dinero, aquí verás tu comprobante.</p>
+                <a href="#" class="boton-enlace" data-seguir hidden>Volver al inicio</a>
             </div>
         </section>
         <section id="vendedor" hidden>
             <h2>Cobrar</h2>
 
-            <form class="tarjeta angosto" onsubmit="event.preventDefault()" data-configurar hidden>
-                <p>Antes de cobrar, cuéntanos unos datos. Una parte de cada venta le llega sola a tu proveedor hasta pagar lo que te fió.</p>
-                <label>
-                    Tu nombre
-                    <small>Así te verán tus clientes. Ejemplo: Doña Rita</small>
-                    <input name="vendedor" autocomplete="off" required>
-                </label>
-                <fieldset>
-                    <legend>¿Cómo quieres recibir tu dinero?</legend>
-                    <div class="opciones">
-                        <label><input type="radio" name="conCuenta" value="no" checked> No tengo cuenta: lo saco en efectivo con un PIN</label>
-                        <label><input type="radio" name="conCuenta" value="si"> Tengo billetera: me llega directo</label>
+            <form class="tarjeta angosto" onsubmit="event.preventDefault()" novalidate data-configurar hidden>
+                <div data-paso="Tus datos">
+                    <p class="ayuda">Antes de cobrar, cuéntanos unos datos. Son 3 pasos cortos.</p>
+                    <label>
+                        Tu nombre
+                        <small>Así te verán tus clientes. Ejemplo: Doña Rita</small>
+                        <input name="vendedor" autocomplete="off" required>
+                    </label>
+                    <fieldset>
+                        <legend>¿Cómo quieres recibir tu dinero?</legend>
+                        <div class="opciones">
+                            <label><input type="radio" name="conCuenta" value="no" checked> <span><strong>En efectivo</strong><small>No tengo cuenta. Lo saco en un corresponsal con un PIN que me llega por mensaje.</small></span></label>
+                            <label><input type="radio" name="conCuenta" value="si"> <span><strong>En mi billetera</strong><small>Tengo cuenta. El dinero me llega directo.</small></span></label>
+                        </div>
+                    </fieldset>
+                    <div data-sin-cuenta class="grid">
+                        <label>
+                            Tu cédula
+                            <small>Solo números. Ejemplo: 1020304050</small>
+                            <input name="cedula" inputmode="numeric" autocomplete="off" required>
+                        </label>
+                        <label>
+                            Tu celular
+                            <small>Aquí te llega el PIN. Ejemplo: 3001234567</small>
+                            <input name="celular" inputmode="tel" autocomplete="off" required>
+                        </label>
                     </div>
-                </fieldset>
-                <div data-sin-cuenta class="grid">
-                    <label>
-                        Tu cédula
-                        <small>Solo números. Ejemplo: 1020304050</small>
-                        <input name="cedula" inputmode="numeric" autocomplete="off">
-                    </label>
-                    <label>
-                        Tu celular
-                        <small>Aquí te llega el PIN. Ejemplo: 3001234567</small>
-                        <input name="celular" inputmode="tel" autocomplete="off">
+                    <label data-con-cuenta hidden>
+                        Tu billetera
+                        <small>La dirección de tu cuenta. Ejemplo: https://ilp.interledger-test.dev/rita</small>
+                        <input name="walletVendedor" type="text" inputmode="url" spellcheck="false" autocapitalize="off" autocomplete="off">
                     </label>
                 </div>
-                <label data-con-cuenta hidden>
-                    Tu billetera
-                    <small>Ejemplo: https://ilp.interledger-test.dev/rita</small>
-                    <input name="walletVendedor" type="text" inputmode="url" spellcheck="false" autocapitalize="off" autocomplete="off">
-                </label>
-                <label>
-                    Billetera de tu proveedor
-                    <small>Ejemplo: https://ilp.interledger-test.dev/proveedor</small>
-                    <input name="proveedorWallet" type="text" inputmode="url" spellcheck="false" autocapitalize="off" autocomplete="off" required>
-                </label>
-                <div class="grid">
+                <div data-paso="Tu proveedor" hidden>
+                    <p class="aviso-azul">Una parte de cada venta le llega sola a tu proveedor hasta pagar lo que te fió. Tú no tienes que hacer nada.</p>
                     <label>
-                        ¿Qué parte de cada venta va al proveedor? (%)
-                        <small>35 quiere decir 35 pesos de cada 100.</small>
-                        <input name="porcentaje" type="number" min="1" max="100" value="35" required>
+                        Billetera de tu proveedor
+                        <small>Ejemplo: https://ilp.interledger-test.dev/proveedor</small>
+                        <input name="proveedorWallet" type="text" inputmode="url" spellcheck="false" autocapitalize="off" autocomplete="off" required>
                     </label>
-                    <label>
-                        ¿Cuánto le debes? (opcional)
-                        <small>Si no le debes nada, déjalo vacío. Ejemplo: 40000</small>
-                        <input name="deuda" inputmode="decimal" autocomplete="off">
-                    </label>
+                    <div class="grid">
+                        <label>
+                            ¿Qué parte de cada venta le das? (%)
+                            <small>35 quiere decir 35 pesos de cada 100.</small>
+                            <input name="porcentaje" type="number" inputmode="numeric" min="1" max="100" value="35" required>
+                        </label>
+                        <label>
+                            ¿Cuánto le debes? (opcional)
+                            <small>Si no le debes nada, déjalo vacío. Ejemplo: 40000</small>
+                            <input name="deuda" inputmode="decimal" autocomplete="off">
+                        </label>
+                    </div>
                 </div>
-                <div class="grid">
-                    <label>
-                        ¿Quieres ahorrar una parte de cada venta? (%, opcional)
-                        <small>10 quiere decir 10 pesos de cada 100 de lo tuyo. Si no, déjalo vacío.</small>
-                        <input name="ahorroPorcentaje" type="number" min="0" max="100" autocomplete="off">
-                    </label>
-                    <label>
-                        Billetera de ahorro
-                        <small>A dónde va lo que ahorras. Empieza por https:// o por $</small>
-                        <input name="ahorroWallet" type="text" inputmode="url" spellcheck="false" autocapitalize="off" autocomplete="off">
-                    </label>
+                <div data-paso="Ahorro (opcional)" hidden>
+                    <p class="aviso-azul">Puedes guardar sola una parte de lo tuyo en cada venta. Si no quieres, deja esto vacío y toca el botón.</p>
+                    <div class="grid">
+                        <label>
+                            ¿Qué parte quieres ahorrar? (%)
+                            <small>10 quiere decir 10 pesos de cada 100 de lo tuyo.</small>
+                            <input name="ahorroPorcentaje" type="number" inputmode="numeric" min="0" max="100" autocomplete="off">
+                        </label>
+                        <label>
+                            Billetera de ahorro
+                            <small>A dónde va lo que ahorras. Empieza por https:// o por $</small>
+                            <input name="ahorroWallet" type="text" inputmode="url" spellcheck="false" autocapitalize="off" autocomplete="off">
+                        </label>
+                    </div>
                 </div>
-                <button type="submit">Guardar y ver mi código QR</button>
+                <p class="aviso-error" data-aviso-form role="alert" hidden></p>
+                <div class="navegacion-pasos">
+                    <button type="button" class="secondary outline" data-atras hidden>Atrás</button>
+                    <button type="submit">Guardar y ver mi código QR</button>
+                </div>
             </form>
 
             <div class="dos-columnas iguales">
                 <div data-panel hidden>
                     <article class="tarjeta">
                         <p><strong data-nombre>Mi cajita</strong></p>
-                        <p class="rotulo">Hoy llevas</p>
-                        <p><strong data-saldo>$ 0</strong><br>en <span data-ventas>0</span> ventas</p>
-                        <p>
-                            Tu proveedor ya recibió <strong data-pagado>$ 0</strong> de <strong data-deuda>$ 0</strong>
-                            <span data-saldada hidden><br>✔ Ya le pagaste toda la deuda</span>
+                        <p class="rotulo">Te ha llegado</p>
+                        <p class="cifra"><strong data-saldo>$ 0</strong> <span class="detalle-cifra">por <span data-ventas>0 ventas</span></span></p>
+                        <div class="bloque-proveedor">
+                            <p class="rotulo">Lo que le has pagado a tu proveedor</p>
+                            <p><strong data-pagado>$ 0</strong> de <strong data-deuda>$ 0</strong></p>
                             <progress data-barra value="0" max="1" aria-label="Lo que ya le pagaste al proveedor"></progress>
-                        </p>
-                        <button type="button" data-retirar>Retirar todo en efectivo</button>
+                            <p class="pequeno" data-falta hidden></p>
+                            <p class="pequeno exito" data-saldada hidden>✔ Ya le pagaste toda la deuda</p>
+                        </div>
+                        <button type="button" data-retirar>Sacar todo mi dinero en efectivo</button>
+                        <p class="pequeno" data-ayuda-retiro>Te llega un PIN por mensaje. Con el PIN y tu cédula te lo entregan en cualquier corresponsal.</p>
                         <p data-aviso-retiro role="status" hidden></p>
                     </article>
                 </div>
 
                 <div class="tarjeta qr">
                     <p data-qr-nombre>QR del puesto</p>
-                    <p class="ayuda" style="margin-inline: auto;">Muéstrale este código a tu cliente. Lo escanea con la cámara de su celular y te paga.</p>
+                    <p class="ayuda" style="margin-inline: auto;">Muéstrale este código a tu cliente. Lo escanea con la cámara de su celular y te paga. Tu parte y la del proveedor se separan solas.</p>
                     <img data-qr alt="Código QR para pagarle a este puesto" width="280" height="280">
                     <p><small>Si el cliente no puede escanear, que abra: <a data-enlace></a></small></p>
                 </div>
@@ -413,7 +553,7 @@
                     </div>
                     <label>
                         Billeteras de los meseros (opcional)
-                        <small>Una por línea. La propina se reparte en partes iguales; para repartir por porcentaje escribe la billetera con =70 al final (deben sumar 100).</small>
+                        <small>Escribe una por línea. La propina se reparte en partes iguales. Si quieres otro reparto, pon =70 al final de una billetera y =30 al final de la otra (deben sumar 100).</small>
                         <textarea name="meseros" rows="2" spellcheck="false" autocapitalize="off"></textarea>
                     </label>
                     <label>
@@ -426,7 +566,7 @@
                         </select>
                     </label>
                     <label data-fecha hidden>Fecha y hora en que vence <input name="vigenteHasta" type="datetime-local"></label>
-                    <button type="submit">Crear QR</button>
+                    <button type="submit">Crear este código QR</button>
                 </form>
                 <div class="qr" data-qr-nuevo hidden>
                     <img alt="Código QR nuevo" width="260" height="260">
@@ -434,67 +574,79 @@
                 </div>
             </details>
 
-            <p><a href="#vendedor?reparto=nuevo" data-cambiar hidden>Configurar otro reparto</a></p>
+            <p><a href="#vendedor?reparto=nuevo" data-cambiar hidden>Cambiar mis datos o mi proveedor</a></p>
         </section>
         <section id="remitente" hidden>
             <h2>Enviar dinero</h2>
             <p class="ayuda">Mándale dinero a tu familia solo con su celular y su cédula. Si no tiene cuenta, lo saca en efectivo en un corresponsal.</p>
-            <form class="tarjeta angosto" onsubmit="event.preventDefault()" data-cotizar>
-                <label>
-                    Tu nombre
-                    <small>Tu familiar lo verá en el mensaje. Ejemplo: Carlos</small>
-                    <input name="nombre" autocomplete="off">
-                </label>
-                <label>
-                    Tu billetera
-                    <small>Ejemplo: https://ilp.interledger-test.dev/carlos</small>
-                    <input name="remitente" type="text" inputmode="url" spellcheck="false" autocapitalize="off" autocomplete="off" required>
-                </label>
-                <fieldset>
-                    <legend>¿Tu familiar tiene cuenta?</legend>
-                    <div class="opciones">
-                        <label><input type="radio" name="conCuenta" value="no" checked> No tiene cuenta: lo saca en efectivo</label>
-                        <label><input type="radio" name="conCuenta" value="si"> Tiene billetera: le llega directo</label>
+            <form class="tarjeta angosto" onsubmit="event.preventDefault()" novalidate data-cotizar>
+                <div data-paso="¿A quién le envías?">
+                    <fieldset>
+                        <legend>¿Tu familiar tiene cuenta?</legend>
+                        <div class="opciones">
+                            <label><input type="radio" name="conCuenta" value="no" checked> <span><strong>No tiene cuenta</strong><small>Le llega un mensaje y lo saca en efectivo con un PIN y su cédula.</small></span></label>
+                            <label><input type="radio" name="conCuenta" value="si"> <span><strong>Tiene billetera</strong><small>El dinero le llega directo a su cuenta.</small></span></label>
+                        </div>
+                    </fieldset>
+                    <div data-sin-cuenta class="grid">
+                        <label>
+                            Celular de quien recibe
+                            <small>Ahí le avisamos. Ejemplo: 3001234567</small>
+                            <input name="celular" inputmode="tel" autocomplete="off" required>
+                        </label>
+                        <label>
+                            Cédula de quien recibe
+                            <small>Solo números. Ejemplo: 1020304050</small>
+                            <input name="cedula" inputmode="numeric" autocomplete="off" required>
+                        </label>
                     </div>
-                </fieldset>
-                <div data-sin-cuenta class="grid">
-                    <label>
-                        Celular de quien recibe
-                        <small>Ejemplo: 3001234567</small>
-                        <input name="celular" inputmode="tel" autocomplete="off">
-                    </label>
-                    <label>
-                        Cédula de quien recibe
-                        <small>Solo números. Ejemplo: 1020304050</small>
-                        <input name="cedula" inputmode="numeric" autocomplete="off">
+                    <label data-con-cuenta hidden>
+                        Billetera de quien recibe
+                        <small>Ejemplo: https://ilp.interledger-test.dev/mama</small>
+                        <input name="destinatarioWallet" type="text" inputmode="url" spellcheck="false" autocapitalize="off" autocomplete="off">
                     </label>
                 </div>
-                <label data-con-cuenta hidden>
-                    Billetera de quien recibe
-                    <small>Ejemplo: https://ilp.interledger-test.dev/mama</small>
-                    <input name="destinatarioWallet" type="text" inputmode="url" spellcheck="false" autocapitalize="off" autocomplete="off">
-                </label>
-                <label>
-                    ¿Cuánto vas a enviar?
-                    <small>En tu moneda, solo números. Ejemplo: 50</small>
-                    <input name="monto" inputmode="decimal" autocomplete="off" required>
-                </label>
-                <button type="submit">Ver cuánto le llega</button>
+                <div data-paso="¿Cuánto envías?" hidden>
+                    <label>
+                        ¿Cuánto vas a enviar?
+                        <small>En tu moneda, solo números. Ejemplo: 50</small>
+                        <input name="monto" inputmode="decimal" autocomplete="off" required>
+                    </label>
+                    <label>
+                        Tu nombre
+                        <small>Tu familiar lo verá en el mensaje. Ejemplo: Carlos</small>
+                        <input name="nombre" autocomplete="off">
+                    </label>
+                    <label>
+                        Tu billetera
+                        <small>De aquí sale el dinero. Ejemplo: https://ilp.interledger-test.dev/carlos</small>
+                        <input name="remitente" type="text" inputmode="url" spellcheck="false" autocapitalize="off" autocomplete="off" required>
+                    </label>
+                </div>
+                <div class="navegacion-pasos">
+                    <button type="button" class="secondary outline" data-atras hidden>Atrás</button>
+                    <button type="submit">Ver cuánto le llega</button>
+                </div>
             </form>
             <article class="tarjeta angosto" data-cotizacion hidden>
-                <p>Te cobran <strong data-cobra></strong></p>
-                <p>Le llegan <strong data-llega></strong> <span data-a-quien></span></p>
+                <div class="progreso-pasos"><p class="paso-actual"><span>Paso 3 de 3</span><strong>Revisa y envía</strong></p><ol aria-hidden="true"><li class="hecho"></li><li class="hecho"></li><li class="actual"></li></ol></div>
+                <dl class="cuentas">
+                    <div><dt>Tú pagas</dt><dd data-cobra></dd></div>
+                    <div><dt>Le llegan</dt><dd data-llega></dd></div>
+                </dl>
+                <p data-a-quien></p>
                 <p><small data-tasa></small></p>
-                <div class="grid">
-                    <button type="button" data-enviar>Enviar el dinero</button>
+                <div class="navegacion-pasos">
                     <button type="button" class="secondary outline" data-cambiar>Cambiar datos</button>
+                    <button type="button" data-enviar>Enviar el dinero</button>
                 </div>
+                <p class="nota-centro">Al tocar «Enviar», se abre tu billetera para que confirmes.</p>
             </article>
             <p data-aviso class="angosto" role="alert" hidden></p>
         </section>
         <section id="celular" hidden>
             <h2>Mensajes</h2>
-            <p class="ayuda">Aquí llegan los mensajes de texto (SMS) de La Cajita.</p>
+            <p class="ayuda">Así ve los mensajes de texto alguien con un celular sencillo, sin la app. Escribe su número y toca «Ver mensajes». En el celular, toca <strong>1</strong> para ver el saldo o <strong>2</strong> para sacar el dinero.</p>
             <div class="dos-columnas iguales">
                 <form class="tarjeta" onsubmit="event.preventDefault()" data-numero>
                     <label>
@@ -523,7 +675,7 @@
         </section>
         <section id="cajero" hidden>
             <h2>Cajero</h2>
-            <p class="ayuda">Pídele a la persona su cédula y el PIN que le llegó por mensaje. Se entrega todo el dinero que tiene.</p>
+            <p class="ayuda">Pantalla del corresponsal. Pídele a la persona su cédula y el PIN que le llegó por mensaje. Se le entrega todo el dinero que tiene.</p>
             <form class="tarjeta muy-angosto" onsubmit="event.preventDefault()">
                 <label>
                     Cédula de quien retira
@@ -532,18 +684,19 @@
                 </label>
                 <label>
                     PIN que le llegó por mensaje
-                    <small>8 números. Ejemplo: 1234-5678</small>
+                    <small>8 números, con o sin guion. Ejemplo: 1234-5678</small>
                     <input name="pin" inputmode="numeric" autocomplete="off" required>
                 </label>
                 <article data-resultado role="status" hidden></article>
-                <button type="submit">Revisar y entregar el dinero</button>
+                <button type="submit">Revisar PIN y entregar el dinero</button>
             </form>
         </section>
     </main>
     <footer class="herramientas">
-        <small>Herramientas de la demo: <a href="#celular">Celular</a> · <a href="#cajero">Cajero (corresponsal)</a></small>
+        <small>Herramientas de la demo:</small> <a href="#celular">📱 Celular</a> <a href="#cajero">🏪 Cajero (corresponsal)</a>
     </footer>
     <script src="js/perfil.js"></script>
+    <script src="js/iconos.js"></script>
     <script>
         const enlacesPestana = document.querySelectorAll('header [data-pestana]');
 

@@ -1,18 +1,21 @@
 // Pestaña Remitente (H10): celular + cédula (o wallet) + monto → "te cobran X, llegan Y" → Enviar → consentimiento.
 // La cotización la hace Open Payments (quote) con el cambio de moneda; el aviso por SMS (H11) lo manda el backend.
 import { alAbrirPestana, cotizarRemesa, enviarRemesa, formatearMonto } from './api.js';
+import { pasoAPaso } from './pasos.js';
 
 const seccion = document.getElementById('remitente');
 const formulario = seccion.querySelector('[data-cotizar]');
 const cotizacion = seccion.querySelector('[data-cotizacion]');
 const botonEnviar = seccion.querySelector('[data-enviar]');
 const aviso = seccion.querySelector('[data-aviso]');
+pasoAPaso(formulario, { total: 3 });
 
 let cotizacionActual = null;
 
 function mostrarAviso(texto) {
     aviso.textContent = texto;
     aviso.hidden = !texto;
+    if (texto) aviso.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
 
 function remitenteGuardado() {
@@ -47,11 +50,18 @@ alAbrirPestana('remitente', () => {
     volverAlFormulario();
 });
 
-formulario.addEventListener('change', () => {
-    const conCuenta = formulario.elements.conCuenta.value === 'si';
+function marcarObligatorios() {
+    const campos = formulario.elements;
+    const conCuenta = campos.conCuenta.value === 'si';
     seccion.querySelector('[data-sin-cuenta]').hidden = conCuenta;
     seccion.querySelector('[data-con-cuenta]').hidden = !conCuenta;
-});
+    campos.celular.required = !conCuenta;
+    campos.cedula.required = !conCuenta;
+    campos.destinatarioWallet.required = conCuenta;
+}
+
+formulario.addEventListener('change', marcarObligatorios);
+marcarObligatorios();
 
 formulario.addEventListener('submit', async (evento) => {
     evento.preventDefault();
@@ -84,18 +94,21 @@ formulario.addEventListener('submit', async (evento) => {
         seccion.querySelector('[data-cobra]').textContent = formatearMonto(cotizacionActual.cobra);
         seccion.querySelector('[data-llega]').textContent = formatearMonto(cotizacionActual.llega);
         seccion.querySelector('[data-a-quien]').textContent = conCuenta
-            ? 'a la billetera de tu familiar.'
-            : `a nombre de la cédula ${cuerpo.cedula}. Le avisamos con un mensaje al ${cuerpo.celular}.`;
+            ? 'Le llegan directo a la billetera de tu familiar.'
+            : `Quedan a nombre de la cédula ${cuerpo.cedula}. Le avisamos con un mensaje al ${cuerpo.celular} y lo saca en efectivo con su cédula.`;
+        botonEnviar.textContent = `Enviar ${formatearMonto(cotizacionActual.cobra)}`;
         const tasa = Number(cotizacionActual.llega.value) / 10 ** cotizacionActual.llega.assetScale
             / (Number(cotizacionActual.cobra.value) / 10 ** cotizacionActual.cobra.assetScale);
         seccion.querySelector('[data-tasa]').textContent = cotizacionActual.cobra.assetCode === cotizacionActual.llega.assetCode
             ? 'Misma moneda: sin cambio.'
-            : `Tasa efectiva: 1 ${cotizacionActual.cobra.assetCode} ≈ ${tasa.toLocaleString('es-CO', { maximumFractionDigits: 2 })} ${cotizacionActual.llega.assetCode}. `
-                + 'La diferencia es el cambio de moneda más la comisión de la red, y la pagas tú: a quien recibe le llega exactamente ese monto, sin descuentos.';
+            : `Cambio: 1 ${cotizacionActual.cobra.assetCode} ≈ ${tasa.toLocaleString('es-CO', { maximumFractionDigits: 2 })} ${cotizacionActual.llega.assetCode}, ya con la comisión incluida. `
+                + 'A tu familiar le llega exactamente ese monto, sin descuentos.';
         formulario.hidden = true;
         cotizacion.hidden = false;
+        cotizacion.scrollIntoView({ block: 'nearest' });
+        botonEnviar.focus({ preventScroll: true });
     } catch (error) {
-        mostrarAviso(`⚠ No pudimos calcular cuánto le llega. Intenta otra vez. (${error.message})`);
+        mostrarAviso(`⚠ No pudimos calcular cuánto le llega. ${error.message.replace(/\.?$/, '.')}`);
     } finally {
         boton.removeAttribute('aria-busy');
         boton.disabled = false;
@@ -114,7 +127,7 @@ botonEnviar.addEventListener('click', async () => {
         location.href = redirectUrl;   // pantalla de consentimiento de la wallet del remitente
     } catch (error) {
         if (error.status === 404 || error.status === 409 || error.status === 410) volverAlFormulario();   // cotización inexistente, usada o vencida
-        mostrarAviso(`⚠ No pudimos enviar el dinero. Intenta otra vez. (${error.message})`);
+        mostrarAviso(`⚠ No pudimos enviar el dinero. ${error.message.replace(/\.?$/, '.')} Revisa los datos e intenta otra vez.`);
     } finally {
         botonEnviar.removeAttribute('aria-busy');
         botonEnviar.disabled = false;

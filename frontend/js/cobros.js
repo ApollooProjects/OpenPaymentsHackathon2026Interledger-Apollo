@@ -28,7 +28,8 @@ function filaDeuda(deuda) {
     p.append(`${deuda.vendedor}: ${formatearMonto(deuda.pagado)} pagado`);
     if (total > 0n) {
         p.append(` de ${formatearMonto(deuda.deuda)}${pagado >= total ? ' ✔ deuda saldada' : ''}`);
-        p.append(Object.assign(document.createElement('progress'), { max: Number(total), value: Number(pagado) }));
+        p.append(Object.assign(document.createElement('progress'), { max: Number(total), value: Number(pagado), ariaLabel: `Lo que te ha pagado ${deuda.vendedor}` }));
+        if (pagado < total) p.append(Object.assign(document.createElement('small'), { className: 'pequeno', textContent: `Faltan ${formatearMonto({ ...deuda.deuda, value: (total - pagado).toString() })}.` }));
     } else {
         p.append(' · sin deuda pendiente');
     }
@@ -40,6 +41,9 @@ async function actualizar() {
     if (!perfil) return;
     const esMesero = perfil.id.startsWith('mesero');
     $('h2').textContent = esMesero ? 'Mis propinas' : 'Lo que me han pagado';
+    $('[data-ayuda-cobros]').textContent = esMesero
+        ? 'Cuando un cliente deja propina con el QR de la mesa, tu parte te llega sola a tu billetera. Se actualiza solo.'
+        : 'Cada vez que tu vendedora vende, una parte te llega sola hasta saldar lo que te debe. Se actualiza solo.';
     if (walletMostrada !== perfil.wallet) {
         walletMostrada = perfil.wallet;
         $('[data-total]').textContent = '…';
@@ -52,14 +56,16 @@ async function actualizar() {
         if (window.LaCajita?.perfil()?.wallet !== perfil.wallet) return;
         $('[data-total]').textContent = cobros.total ? formatearMonto(cobros.total) : '$ 0';
         $('[data-cuantos]').textContent = cobros.movimientos.length
-            ? `${cobros.movimientos.length} ${esMesero ? 'propina' : 'abono'}${cobros.movimientos.length > 1 ? 's' : ''} en tu wallet`
-            : (esMesero ? 'Todavía no te han llegado propinas.' : 'Todavía no te han llegado pagos.');
+            ? `${cobros.movimientos.length} ${esMesero ? 'propina' : 'abono'}${cobros.movimientos.length > 1 ? 's' : ''} en tu billetera`
+            : (esMesero
+                ? 'Todavía no te han llegado propinas. Aparecerán aquí cuando un cliente pague con propina.'
+                : 'Todavía no te han llegado pagos. Aparecerán aquí cuando tu vendedora haga su próxima venta.');
         $('[data-deudas]').hidden = esMesero || !cobros.deudas.length;
         $('[data-lista-deudas]').replaceChildren(...cobros.deudas.map(filaDeuda));
         $('[data-movimientos]').replaceChildren(...cobros.movimientos.map((m) => filaMovimiento(m, esMesero)));
         mostrarAviso('');
     } catch (error) {
-        mostrarAviso(`No se pudo leer tu wallet: ${error.message}`);
+        mostrarAviso(`⚠ No pudimos leer tu billetera. Lo intentamos otra vez en unos segundos. (${error.message})`);
     }
 }
 

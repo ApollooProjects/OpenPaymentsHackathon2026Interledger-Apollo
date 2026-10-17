@@ -20,6 +20,24 @@ const bloqueRapidos = seccion.querySelector('[data-rapidos]');
 const textoTotal = seccion.querySelector('[data-total]');
 const boton = formulario.querySelector('button[type=submit]');
 const aviso = seccion.querySelector('[data-aviso]');
+const sinQr = seccion.querySelector('[data-sin-qr]');
+const billetera = seccion.querySelector('[data-billetera]');
+
+// Guía cuando no hay QR que pagar (sin QR, vencido, ya usado o inexistente).
+function mostrarSinQr(motivo) {
+    sinQr.querySelector('[data-sin-qr-motivo]').replaceChildren(Object.assign(document.createElement('strong'), { textContent: motivo }));
+    sinQr.hidden = false;
+}
+
+// Con la billetera ya conocida se muestra en una línea («Pagas desde …/laura · Cambiar») para no distraer.
+function pintarBilletera() {
+    const valor = campoPagador.value.trim();
+    const conocida = /^(https:\/\/|\$)\S+\/\S+/.test(valor);
+    billetera.querySelector('[data-billetera-corta]').textContent = conocida ? valor.split('/').filter(Boolean).pop() : 'tu billetera';
+    if (conocida && document.activeElement !== campoPagador) billetera.open = false;
+    if (!conocida) billetera.open = true;
+}
+campoPagador.addEventListener('change', pintarBilletera);
 
 let qrActual = null;
 let permisoActual = { activo: false };
@@ -29,6 +47,7 @@ seccion.querySelector('[data-tope]').textContent = formatearMonto(TOPE_RAPIDOS);
 function mostrarAviso(texto) {
     aviso.textContent = texto;
     aviso.hidden = !texto;
+    if (texto) aviso.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
 
 function recordarPagador(valor) {
@@ -81,6 +100,7 @@ function actualizarTotal() {
     campoPropinaOtra.hidden = formulario.elements.propina.value !== 'otro';
     if (!base) {
         textoTotal.textContent = '';
+        boton.textContent = 'Pagar';
         return;
     }
     const total = { ...base, value: (BigInt(base.value) + BigInt(propina?.value || 0)).toString() };
@@ -88,7 +108,7 @@ function actualizarTotal() {
     textoTotal.textContent = propina
         ? `Total: ${formatearMonto(total)} (${formatearMonto(base)} + ${formatearMonto(propina)} de propina)`
         : `Total: ${formatearMonto(total)}`;
-    boton.textContent = rapido ? `⚡ Pagar ${formatearMonto(total)} sin volver a aprobar` : 'Pagar';
+    boton.textContent = rapido ? `⚡ Pagar ${formatearMonto(total)} sin volver a aprobar` : `Pagar ${formatearMonto(total)}`;
 }
 
 async function cargarPermiso() {
@@ -120,10 +140,13 @@ alAbrirPestana('cliente', async (params) => {
     mostrarAviso('');
     formulario.hidden = true;
     bloqueRapidos.hidden = true;
+    sinQr.hidden = true;
     campoPagador.value = campoPagador.value || pagadorGuardado();
+    pintarBilletera();
 
     if (!qrId) {
         titulo.textContent = 'Escanea el QR del vendedor para pagar.';
+        mostrarSinQr('Para pagar necesitas el código QR del puesto.');
         return;
     }
 
@@ -132,11 +155,13 @@ alAbrirPestana('cliente', async (params) => {
         qrActual = await obtenerQr(qrId);
     } catch (error) {
         titulo.textContent = error.status === 410 ? 'Este QR ya venció.' : 'No encontramos este QR.';
+        mostrarSinQr('Pídele al vendedor que te muestre su código QR otra vez y vuelve a escanearlo.');
         return;
     }
 
     if (qrActual.usado) {
         titulo.textContent = 'Este QR ya se pagó: sirve para un solo pago.';
+        mostrarSinQr('Si quieres pagar otra vez, pídele al vendedor un código QR nuevo.');
         return;
     }
     titulo.textContent = qrActual.descripcion
@@ -193,6 +218,7 @@ formulario.addEventListener('submit', async (evento) => {
     }
     const pagador = campoPagador.value.trim().replace(/^\$/, 'https://');
     if (!pagador.startsWith('https://')) {
+        billetera.open = true;
         mostrarAviso('⚠ La dirección de tu billetera debe empezar por https:// o por $');
         return;
     }
@@ -223,7 +249,8 @@ formulario.addEventListener('submit', async (evento) => {
             location.hash = `recibo?pago=${encodeURIComponent(respuesta.pagoId)}`;   // pagos rápidos: sin consentimiento
         }
     } catch (error) {
-        mostrarAviso(`⚠ No pudimos iniciar el pago. Revisa la dirección de tu billetera e intenta otra vez. (${error.message})`);
+        billetera.open = true;
+        mostrarAviso(`⚠ No pudimos iniciar el pago. ${error.message.replace(/\.?$/, '.')}`);
     } finally {
         boton.removeAttribute('aria-busy');
         boton.disabled = false;

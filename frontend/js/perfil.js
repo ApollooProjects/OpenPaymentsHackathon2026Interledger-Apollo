@@ -51,7 +51,8 @@
         });
         const cobros = document.querySelector('header [data-pestana="cobros"]');
         if (cobros) cobros.textContent = perfil?.id.startsWith('mesero') ? 'Mis propinas' : 'Mis cobros';
-        saludo.replaceChildren(perfil ? `Hola, ${perfil.nombre} · ` : '',
+        saludo.replaceChildren(
+            ...(perfil ? [Object.assign(document.createElement('span'), { textContent: `Hola, ${perfil.nombre}` })] : []),
             Object.assign(document.createElement('a'), { href: '#perfil', textContent: perfil ? 'Cambiar perfil' : 'Entrar como…' }));
         if (!perfil) return;
         if (perfil.id === 'vendedora') {
@@ -86,9 +87,10 @@
         boton.type = 'button';
         boton.className = 'secondary outline';
         boton.dataset.perfil = p.id;
-        const rol = document.createElement('small');
-        rol.textContent = `${p.rol} · ${p.detalle}`;
-        boton.append(Object.assign(document.createElement('strong'), { textContent: p.nombre }), rol);
+        const rol = Object.assign(document.createElement('span'), { className: 'rol', textContent: p.rol });
+        const detalle = Object.assign(document.createElement('small'), { textContent: p.detalle });
+        boton.append(rol, Object.assign(document.createElement('strong'), { textContent: p.nombre }), detalle);
+        boton.setAttribute('aria-label', `Entrar como ${p.nombre}, ${p.rol}. ${p.detalle}`);
         boton.addEventListener('click', () => {
             perfil = p;
             guardarPerfil(p.id);

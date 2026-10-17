@@ -5,6 +5,19 @@ const seccion = document.getElementById('recibo');
 const estado = seccion.querySelector('[data-estado]');
 const total = seccion.querySelector('[data-total]');
 const lista = seccion.querySelector('[data-destinos]');
+const comprobante = seccion.querySelector('[data-comprobante]');
+const tituloReparto = seccion.querySelector('[data-reparto-titulo]');
+const sinPago = seccion.querySelector('[data-sin-pago]');
+const seguir = seccion.querySelector('[data-seguir]');
+
+// Botón para seguir después del pago: a la pantalla de inicio del perfil (Pagar, Enviar dinero…).
+function mostrarSeguir() {
+    const inicio = window.LaCajita?.perfil()?.pestanas[0];
+    const textos = { cliente: 'Hacer otro pago', remitente: 'Enviar más dinero' };
+    seguir.href = `#${inicio || 'perfil'}`;
+    seguir.textContent = textos[inicio] || 'Volver al inicio';
+    seguir.hidden = false;
+}
 
 const ESTADOS_FINALES = ['completado', 'fallido', 'rechazado'];
 const TEXTOS = {
@@ -34,9 +47,13 @@ let nota = null;
 function pintar(pago) {
     const llegaron = (pago.destinos || []).filter((d) => d.completo).length;
     const parcial = pago.estado === 'fallido' && llegaron > 0;
-    estado.textContent = parcial ? '⚠️ Pago parcial: una parte llegó y otra no' : TEXTOS[pago.estado] || `⏳ Procesando (${pago.estado})…`;
+    estado.textContent = parcial ? '⚠️ Pago parcial: una parte llegó y otra no' : TEXTOS[pago.estado] || '⏳ Procesando tu pago… espera unos segundos.';
+    comprobante.dataset.final = parcial ? 'parcial' : pago.estado;
+    sinPago.hidden = true;
     total.textContent = pago.total ? formatearMonto(pago.total) : '';
     const terminado = ESTADOS_FINALES.includes(pago.estado);
+    if (terminado) mostrarSeguir();
+    tituloReparto.hidden = (pago.destinos || []).length < 2;
     lista.replaceChildren(...(pago.destinos || []).map((destino) => {
         const fila = document.createElement('li');
         const marca = !terminado ? '' : destino.completo ? '✅ ' : '❌ ';
@@ -48,7 +65,7 @@ function pintar(pago) {
     const partes = [];
     if (pago.creado) partes.push(new Date(pago.creado).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' }));
     if (pago.metodo === 'rapido') partes.push('⚡ pago rápido: sin volver a aprobar');
-    if (pago.metodo === 'consentimiento') partes.push('aprobado en tu wallet');
+    if (pago.metodo === 'consentimiento') partes.push('aprobado en tu billetera');
     if (pago.error && pago.estado !== 'completado') partes.push(`Motivo: ${pago.error}`);
     nota.textContent = partes.join(' · ');
 
@@ -69,7 +86,7 @@ function pintar(pago) {
     }
     detalle.hidden = items.length === 0;
     detalle.replaceChildren(
-        Object.assign(document.createElement('summary'), { textContent: 'Ver en Open Payments' }),
+        Object.assign(document.createElement('summary'), { textContent: 'Ver el detalle técnico (Open Payments)' }),
         Object.assign(document.createElement('ul'), {}),
     );
     detalle.lastChild.append(...items);
@@ -82,9 +99,14 @@ alAbrirPestana('recibo', async (params) => {
     total.textContent = '';
     if (nota) nota.textContent = '';
     if (detalle) detalle.hidden = true;
+    delete comprobante.dataset.final;
+    tituloReparto.hidden = true;
+    seguir.hidden = true;
+    sinPago.hidden = Boolean(pagoId);
 
     if (!pagoId) {
         estado.textContent = 'Todavía no hay un pago para mostrar.';
+        mostrarSeguir();
         return;
     }
 

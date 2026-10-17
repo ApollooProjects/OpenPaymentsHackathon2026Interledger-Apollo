@@ -5,6 +5,7 @@ import {
     alAbrirPestana, aMonto, crearQr, crearReparto, formatearMonto, obtenerQr, obtenerReparto, parametrosHash,
     retirarReparto, urlImagenQr, MONEDA_DEMO
 } from './api.js';
+import { pasoAPaso } from './pasos.js';
 
 const seccion = document.getElementById('vendedor');
 const $ = (selector) => seccion.querySelector(selector);
@@ -14,6 +15,9 @@ const panel = $('[data-panel]');
 const personalizado = $('[data-personalizado]');
 const formQr = personalizado.querySelector('form');
 const aviso = $('[data-aviso]');
+const avisoForm = $('[data-aviso-form]');
+const tarjetaQr = $('.dos-columnas > .qr');
+const asistente = pasoAPaso(formConfigurar);
 
 let reparto = null;   // { id, qrId, vendedor, conCuenta, cedula, celular }
 let temporizador = null;
@@ -29,6 +33,7 @@ function guardarReparto(datos) {
 function mostrarAviso(elemento, texto) {
     elemento.textContent = texto;
     elemento.hidden = !texto;
+    if (texto) elemento.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
 
 function mostrarQr(qrId, nombre) {
@@ -47,14 +52,17 @@ async function actualizarPanel() {
         // Sin deuda (null) la barra muestra solo lo que ya recibió el proveedor.
         const deuda = estado.proveedor.deuda ? BigInt(estado.proveedor.deuda.value) : 0n;
         $('[data-saldo]').textContent = formatearMonto(estado.saldo);
-        $('[data-ventas]').textContent = estado.ventas;
+        $('[data-ventas]').textContent = estado.ventas === 1 ? '1 venta' : `${estado.ventas} ventas`;
         $('[data-pagado]').textContent = formatearMonto(estado.proveedor.pagado);
         $('[data-deuda]').textContent = estado.proveedor.deuda ? formatearMonto(estado.proveedor.deuda) : 'sin deuda';
+        const falta = deuda > pagado ? deuda - pagado : 0n;
+        $('[data-falta]').textContent = falta > 0n ? `Faltan ${formatearMonto({ ...estado.proveedor.pagado, value: falta.toString() })} para saldar la deuda.` : '';
+        $('[data-falta]').hidden = falta === 0n;
         $('[data-barra]').max = Number(deuda) || 1;
         $('[data-barra]').value = Number(pagado);
         $('[data-saldada]').hidden = !(deuda > 0n && pagado >= deuda);
         mostrarPendiente(estado.retiroPendiente);
-        mostrarAviso(aviso, '');
+        if (aviso.textContent.includes('No pudimos mostrar tus ventas')) mostrarAviso(aviso, '');
     } catch (error) {
         mostrarAviso(aviso, `⚠ No pudimos mostrar tus ventas. Intenta otra vez. (${error.message})`);
     }
@@ -65,19 +73,24 @@ let pendiente = null;
 function mostrarPendiente(retiro) {
     pendiente ??= $('[data-retirar]').insertAdjacentElement('beforebegin', document.createElement('p'));
     pendiente.hidden = !retiro;
+    // Con un PIN activo la explicación de cómo retirar ya está en el aviso del PIN.
+    $('[data-ayuda-retiro]').hidden = Boolean(retiro) || reparto?.conCuenta;
     if (!retiro) return;
     const vence = new Date(retiro.vence).toLocaleString('es-CO', { weekday: 'short', hour: 'numeric', minute: '2-digit' });
-    pendiente.textContent = `🔑 PIN activo por ${formatearMonto(retiro.monto)} · vence ${vence}. Llévalo con tu cédula a cualquier corresponsal.`;
+    pendiente.className = 'pin-activo';
+    pendiente.textContent = `🔑 Tienes un PIN listo para sacar ${formatearMonto(retiro.monto)}. Vence ${vence.replace(/\.$/, '')}. Llévalo con tu cédula a cualquier corresponsal.`;
 }
 
 function mostrarPanel() {
     formConfigurar.hidden = true;
+    tarjetaQr.hidden = false;
     panel.hidden = false;
     personalizado.hidden = false;
     $('[data-cambiar]').hidden = false;
     $('[data-nombre]').textContent = reparto.conCuenta ? `Ventas de ${reparto.vendedor}` : `Cajita de ${reparto.vendedor}`;
     // Con cuenta el dinero ya está en su wallet: no hay nada que retirar (H7).
     $('[data-retirar]').hidden = reparto.conCuenta;
+    $('[data-ayuda-retiro]').hidden = reparto.conCuenta;
     mostrarQr(reparto.qrId, `QR de ${reparto.vendedor}`);
     actualizarPanel();
     clearInterval(temporizador);
@@ -93,6 +106,9 @@ function mostrarConfigurar() {
     personalizado.hidden = true;
     $('[data-cambiar]').hidden = true;
     formConfigurar.hidden = false;
+    mostrarAviso(avisoForm, '');
+    asistente.ir(0, { enfocar: false });
+    marcarObligatorios();
 }
 
 alAbrirPestana('vendedor', async (params) => {
@@ -109,6 +125,8 @@ alAbrirPestana('vendedor', async (params) => {
     }
     // Sin reparto: QR estático de la capa 1 y el formulario para configurar uno.
     mostrarConfigurar();
+    // Mientras configura, la única acción es el formulario; el QR simple solo se ve si el enlace lo pide.
+    tarjetaQr.hidden = !params.get('qr');
     const qrId = params.get('qr') || 'demo';
     mostrarQr(qrId, 'QR del puesto');
     try {
@@ -119,11 +137,20 @@ alAbrirPestana('vendedor', async (params) => {
 
 // ---------- Configurar el reparto (H1, H2) ----------
 
-formConfigurar.addEventListener('change', () => {
-    const conCuenta = formConfigurar.elements.conCuenta.value === 'si';
+function marcarObligatorios() {
+    const campos = formConfigurar.elements;
+    const conCuenta = campos.conCuenta.value === 'si';
     $('[data-sin-cuenta]').hidden = conCuenta;
     $('[data-con-cuenta]').hidden = !conCuenta;
-});
+    campos.cedula.required = !conCuenta;
+    campos.celular.required = !conCuenta;
+    campos.walletVendedor.required = conCuenta;
+    // Ahorro: si escribe el porcentaje, la billetera de ahorro pasa a ser obligatoria.
+    campos.ahorroWallet.required = Number(campos.ahorroPorcentaje.value || 0) > 0;
+}
+
+formConfigurar.addEventListener('change', marcarObligatorios);
+formConfigurar.addEventListener('input', marcarObligatorios);
 
 formConfigurar.addEventListener('submit', async (evento) => {
     evento.preventDefault();
@@ -142,16 +169,17 @@ formConfigurar.addEventListener('submit', async (evento) => {
     if (pctAhorro > 0) {
         cuerpo.ahorroPorcentaje = pctAhorro;
         cuerpo.ahorroWallet = campos.ahorroWallet.value.trim().replace(/^\$/, 'https://');
-        if (!cuerpo.ahorroWallet.startsWith('https://')) return mostrarAviso(aviso, '⚠ Para ahorrar escribe también la billetera de ahorro. Debe empezar por https:// o por $');
+        if (!cuerpo.ahorroWallet.startsWith('https://')) return mostrarAviso(avisoForm, '⚠ Para ahorrar escribe también la billetera de ahorro. Debe empezar por https:// o por $');
     }
     if (conCuenta) cuerpo.vendedorWallet = campos.walletVendedor.value.trim().replace(/^\$/, 'https://');
     else Object.assign(cuerpo, { cedula: campos.cedula.value.replace(/\D/g, ''), celular: campos.celular.value.replace(/\D/g, '') });
 
-    if (textoDeuda && !deuda) return mostrarAviso(aviso, '⚠ Escribe lo que le debes solo con números (ejemplo: 40000). Si no le debes nada, déjalo vacío.');
-    if (conCuenta && !cuerpo.vendedorWallet.startsWith('https://')) return mostrarAviso(aviso, '⚠ La dirección de tu billetera debe empezar por https:// o por $');
-    if (!conCuenta && (!cuerpo.cedula || !cuerpo.celular)) return mostrarAviso(aviso, '⚠ Escribe tu cédula y tu celular: los necesitas para sacar tu dinero.');
+    if (textoDeuda && !deuda) return mostrarAviso(avisoForm, '⚠ Escribe lo que le debes solo con números (ejemplo: 40000). Si no le debes nada, déjalo vacío.');
+    if (conCuenta && !cuerpo.vendedorWallet.startsWith('https://')) return mostrarAviso(avisoForm, '⚠ La dirección de tu billetera debe empezar por https:// o por $');
+    if (!conCuenta && (!cuerpo.cedula || !cuerpo.celular)) return mostrarAviso(avisoForm, '⚠ Escribe tu cédula y tu celular: los necesitas para sacar tu dinero.');
 
-    const boton = formConfigurar.querySelector('button');
+    mostrarAviso(avisoForm, '');
+    const boton = formConfigurar.querySelector('button[type=submit]');
     boton.setAttribute('aria-busy', 'true');
     try {
         const { id, qrId } = await crearReparto(cuerpo);
@@ -160,7 +188,7 @@ formConfigurar.addEventListener('submit', async (evento) => {
         location.hash = 'vendedor';
         mostrarPanel();
     } catch (error) {
-        mostrarAviso(aviso, `⚠ No pudimos guardar tus datos. Revisa las billeteras e intenta otra vez. (${error.message})`);
+        mostrarAviso(avisoForm, `⚠ No pudimos guardar tus datos. Revisa las billeteras e intenta otra vez. (${error.message})`);
     } finally {
         boton.removeAttribute('aria-busy');
     }
@@ -177,12 +205,15 @@ $('[data-retirar]').addEventListener('click', async () => {
         const resultado = await retirarReparto(reparto.id);
         if (resultado.ok === false) throw new Error(resultado.error);
         avisoRetiro.replaceChildren(
-            '✅ Listo: te enviamos un mensaje con tu PIN. ',
-            Object.assign(document.createElement('a'), { href: `#celular?numero=${reparto.celular}`, textContent: 'Ver el mensaje' })
+            Object.assign(document.createElement('strong'), { textContent: '✅ Listo: te enviamos un mensaje con tu PIN.' }),
+            Object.assign(document.createElement('span'), { textContent: 'Lleva el PIN y tu cédula a un corresponsal y te entregan todo tu dinero.' }),
+            Object.assign(document.createElement('a'), { href: `#celular?numero=${reparto.celular}`, textContent: 'Ver el mensaje con el PIN' })
         );
+        avisoRetiro.dataset.ok = 'true';
         avisoRetiro.hidden = false;
         actualizarPanel();
     } catch (error) {
+        delete avisoRetiro.dataset.ok;
         mostrarAviso(avisoRetiro, `⚠ No pudimos hacer el retiro. Intenta otra vez. (${error.message})`);
     } finally {
         boton.removeAttribute('aria-busy');
