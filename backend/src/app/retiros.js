@@ -31,7 +31,7 @@ function pinCorrecto(pin, retiro) {
     return intento.length === guardado.length && timingSafeEqual(intento, guardado);
 }
 
-function formatear(monto) {
+export function formatear(monto) {
     return new Intl.NumberFormat('es-CO', {
         style: 'currency',
         currency: monto.assetCode,
