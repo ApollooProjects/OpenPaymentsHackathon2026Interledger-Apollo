@@ -189,9 +189,10 @@ const mock = {
         return { ok: true };
     },
     // Remesa falsa: el remitente paga en EUR y llegan pesos (tasa y comisión inventadas, solo para la pantalla).
-    cotizarRemesa({ monto }) {
-        const cobra = { value: monto.value, assetCode: 'EUR', assetScale: 2 };
-        const llega = { value: String(Math.round(Number(monto.value) * 4300 * 0.98)), ...MONEDA_DEMO };
+    cotizarRemesa({ monto, modo }) {
+        const recibe = modo === 'recibe';
+        const cobra = { value: recibe ? String(Math.ceil(Number(monto.value) / (4300 * 0.98))) : monto.value, assetCode: 'EUR', assetScale: 2 };
+        const llega = { value: recibe ? monto.value : String(Math.round(Number(monto.value) * 4300 * 0.98)), ...MONEDA_DEMO };
         const cotizacionId = `mock-cot-${Date.now()}`;
         const estado = estadoMock();
         estado.cotizaciones = { ...(estado.cotizaciones || {}), [cotizacionId]: { cobra, llega } };

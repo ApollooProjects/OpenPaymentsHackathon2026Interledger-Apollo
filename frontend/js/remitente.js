@@ -58,6 +58,12 @@ function marcarObligatorios() {
     campos.celular.required = !conCuenta;
     campos.cedula.required = !conCuenta;
     campos.destinatarioWallet.required = conCuenta;
+    // "Que reciba exactamente": el monto se escribe en la moneda de quien recibe (pesos).
+    const recibe = campos.modo.value === 'recibe';
+    seccion.querySelector('[data-monto-titulo]').textContent = recibe ? '¿Cuánto quieres que le llegue?' : '¿Cuánto vas a enviar?';
+    seccion.querySelector('[data-monto-ayuda]').textContent = recibe
+        ? 'En pesos colombianos, solo números. Ejemplo: 200000'
+        : 'En tu moneda, solo números. Ejemplo: 50';
 }
 
 formulario.addEventListener('change', marcarObligatorios);
@@ -72,9 +78,14 @@ formulario.addEventListener('submit', async (evento) => {
     const monto = aMontoRemitente(campos.monto.value);
 
     if (!remitente.startsWith('https://')) return mostrarAviso('⚠ La dirección de tu billetera debe empezar por https:// o por $');
-    if (!monto) return mostrarAviso('⚠ Escribe cuánto vas a enviar, solo con números. Ejemplo: 50');
+    const modo = campos.modo.value === 'recibe' ? 'recibe' : 'envio';
+    if (!monto) {
+        return mostrarAviso(modo === 'recibe'
+            ? '⚠ Escribe cuántos pesos quieres que le lleguen, solo con números. Ejemplo: 200000'
+            : '⚠ Escribe cuánto vas a enviar, solo con números. Ejemplo: 50');
+    }
 
-    const cuerpo = { remitente, monto };
+    const cuerpo = { remitente, monto, modo };
     if (campos.nombre.value.trim()) cuerpo.nombreRemitente = campos.nombre.value.trim();
     if (conCuenta) {
         cuerpo.destinatarioWallet = campos.destinatarioWallet.value.trim().replace(/^\$/, 'https://');
@@ -102,7 +113,9 @@ formulario.addEventListener('submit', async (evento) => {
         seccion.querySelector('[data-tasa]').textContent = cotizacionActual.cobra.assetCode === cotizacionActual.llega.assetCode
             ? 'Misma moneda: sin cambio.'
             : `Cambio: 1 ${cotizacionActual.cobra.assetCode} ≈ ${tasa.toLocaleString('es-CO', { maximumFractionDigits: 2 })} ${cotizacionActual.llega.assetCode}, ya con la comisión incluida. `
-                + 'A tu familiar le llega exactamente ese monto, sin descuentos.';
+                + (modo === 'recibe'
+                    ? 'Tú pagas el cambio y la comisión de la red: a tu familiar le llega exactamente lo que pediste.'
+                    : 'La comisión la pagas tú: a tu familiar le llega exactamente ese monto, sin descuentos.');
         formulario.hidden = true;
         cotizacion.hidden = false;
         cotizacion.scrollIntoView({ block: 'nearest' });

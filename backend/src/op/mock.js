@@ -23,7 +23,7 @@ export async function obtenerWallet(walletUrl) {
 const COP_POR_EUR = 4500n;
 const quotes = new Map();
 
-export async function cotizar({ walletUrl, cobroId, debito }) {
+export async function cotizar({ walletUrl, cobroId, debito, recibe }) {
     const cobro = cobros.get(cobroId);
     if (!cobro) throw new Error(`[mock] cobro no encontrado: ${cobroId}`);
     const origen = monedaDe(walletUrl);
@@ -33,6 +33,9 @@ export async function cotizar({ walletUrl, cobroId, debito }) {
     if (debito) {
         debitado = BigInt(debito.value);
         recibido = (debitado * tasa * 99n) / 100n;
+    } else if (recibe) {
+        recibido = BigInt(recibe.value);
+        debitado = (recibido * 100n + tasa * 99n - 1n) / (tasa * 99n);
     } else {
         if (cobro.esperado === null) throw new Error('[mock] sin debito, el cobro necesita monto fijo');
         recibido = BigInt(cobro.esperado) - cobro.recibido;
