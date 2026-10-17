@@ -94,7 +94,7 @@ export async function cotizar({ remitente, nombreRemitente, celular, cedula, des
     return { cotizacionId: id, cobra: cotizacion.debito, llega: cotizacion.recibe, vence: cotizacion.vence };
 }
 
-export async function enviar({ cotizacionId } = {}) {
+export async function enviar({ cotizacionId, app = false } = {}) {
     const fila = db.prepare('SELECT * FROM cotizaciones_remesa WHERE id = ?').get(String(cotizacionId ?? ''));
     if (!fila) throw errorHttp(404, 'Cotización no encontrada');
     if (fila.pago_id) throw errorHttp(409, 'Esta cotización ya se usó: vuelve a cotizar');
@@ -105,7 +105,7 @@ export async function enviar({ cotizacionId } = {}) {
     const resultado = await motor.iniciarPago({
         pagador: fila.remitente,
         cotizar: true,
-        origen: { tipo: 'remesa', cotizacionId: fila.id, nombreRemitente: fila.nombre_remitente },
+        origen: { tipo: 'remesa', cotizacionId: fila.id, nombreRemitente: fila.nombre_remitente, ...(app === true && { app: true }) },
         destinos: [{ ...destino, monto: cotizacion.recibe, quoteId: cotizacion.quoteId, debito: cotizacion.debito }]
     });
     db.prepare('UPDATE cotizaciones_remesa SET pago_id = ? WHERE id = ?').run(resultado.pagoId, fila.id);

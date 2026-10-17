@@ -183,7 +183,7 @@ const mock = {
             propina: (cuerpo.meseros || []).length > 0,
         };
         guardarMock(estado);
-        return { qrId, url: `${location.origin}/?mock=1#cliente?qr=${qrId}` };
+        return { qrId, url: `${location.origin}${location.pathname}?mock=1#cliente?qr=${qrId}` };
     },
     retirar() {
         return { ok: true };

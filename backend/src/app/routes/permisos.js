@@ -24,7 +24,7 @@ rutasPermisos.get('/op/finish-permiso', async (req, res) => {
         console.error(error);
         estado = 'fallido';
     }
-    res.redirect(`/#cliente?pagosRapidos=${encodeURIComponent(estado)}`);
+    res.redirect(`/demoenvivo/#cliente?pagosRapidos=${encodeURIComponent(estado)}`);
 });
 
 rutasPermisos.get('/permisos/:clienteId', (req, res) => {

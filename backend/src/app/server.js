@@ -32,10 +32,12 @@ app.use(express.json({ verify: (req, res, buf) => { req.cuerpoCrudo = buf; } }))
 // no-cache: el navegador (y Cloudflare) revalidan con el ETag en cada carga, así nadie se queda con JS viejo
 // después de un despliegue; si el archivo no cambió, la respuesta es un 304 sin cuerpo.
 const sinCache = { setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache') };
-app.use(express.static(path.join(raiz, 'frontend'), sinCache));
-// App producto: la del usuario (/app) y la del corresponsal (/corresponsal). Si la carpeta no existe, da 404.
-app.use('/app', express.static(path.join(raiz, 'app'), sinCache));
+// La app del usuario va en la raíz; la de la demo en vivo del pitch (pestañas, perfiles, Cajero, Celular) en /demoenvivo.
+// /app queda como alias para enlaces viejos. Si una carpeta no existe, da 404.
+app.use('/demoenvivo', express.static(path.join(raiz, 'frontend'), sinCache));
 app.use('/corresponsal', express.static(path.join(raiz, 'corresponsal'), sinCache));
+app.use('/app', express.static(path.join(raiz, 'app'), sinCache));
+app.use(express.static(path.join(raiz, 'app'), sinCache));
 app.use(rutasQr);
 
 app.get('/salud', (req, res) => {

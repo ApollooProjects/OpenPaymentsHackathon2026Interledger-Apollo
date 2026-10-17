@@ -79,7 +79,7 @@ rutasPagos.post('/pagar/:qrId', async (req, res) => {
         res.json(await motor.iniciarPago({
             pagador,
             clienteId: req.body?.clienteId ?? null,
-            origen: { tipo: 'qr', qrId: qr.id },
+            origen: { tipo: 'qr', qrId: qr.id, ...(req.body?.app === true && { app: true }) },
             destinos
         }));
     } catch (error) {
@@ -92,7 +92,9 @@ rutasPagos.get('/op/finish', async (req, res) => {
     const { pago, interact_ref: interactRef, hash, result: resultado } = req.query;
     if (!pago) return res.status(400).send('Falta el parámetro pago');
     await motor.terminarPago({ pagoId: pago, interactRef, hash, resultado });
-    res.redirect(`/#recibo?pago=${encodeURIComponent(pago)}`);
+    // Vuelve a la app desde la que se pagó: la del usuario (/#/pago/…) o la demo en vivo (/demoenvivo/#recibo…).
+    const id = encodeURIComponent(pago);
+    res.redirect(store.obtenerPago(pago)?.plan?.origen?.app ? `/#/pago/${id}` : `/demoenvivo/#recibo?pago=${id}`);
 });
 
 rutasPagos.get('/pagos/:id', async (req, res) => {

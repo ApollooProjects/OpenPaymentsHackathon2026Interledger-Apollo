@@ -39,10 +39,10 @@ const apiReal = {
     resumen: () => pedir('GET', '/yo/resumen'),
     miQr: (datos) => pedir('POST', '/yo/qr', datos ?? {}),
     verQr: (qrId) => pedir('GET', `/qr/${encodeURIComponent(qrId)}`),
-    pagarQr: (qrId, cuerpo) => pedir('POST', `/pagar/${encodeURIComponent(qrId)}`, cuerpo),
+    pagarQr: (qrId, cuerpo) => pedir('POST', `/pagar/${encodeURIComponent(qrId)}`, { ...cuerpo, app: true }),
     verPago: (pagoId) => pedir('GET', `/pagos/${encodeURIComponent(pagoId)}`),
     cotizarRemesa: (datos) => pedir('POST', '/remesas/cotizar', datos),
-    enviarRemesa: (cotizacionId) => pedir('POST', '/remesas', { cotizacionId }),
+    enviarRemesa: (cotizacionId) => pedir('POST', '/remesas', { cotizacionId, app: true }),
     pedirRetiro: (cedula) => pedir('POST', '/retiros', { cedula })
 };
 

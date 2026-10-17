@@ -159,7 +159,7 @@ rutasYo.get('/yo/resumen', async (req, res) => {
     else if (usuario.tipo === 'billetera') resumen = resumenBilletera(usuario);
     resumen.movimientos.sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)));
     const qrId = cuentas.qrDelUsuario(usuario.id);
-    res.json({ ...resumen, qr: qrId ? { id: qrId, enlace: urlDelQr(qrId, base(req)) } : null });
+    res.json({ ...resumen, qr: qrId ? { id: qrId, enlace: urlDelQr(qrId, base(req), { app: true }) } : null });
 });
 
 function centavos(entrada) {
@@ -182,7 +182,7 @@ rutasYo.post('/yo/qr', async (req, res) => {
 
         const existente = fijo ? cuentas.qrDelUsuario(usuario.id) : null;
         if (existente && store.obtenerQr(existente)) {
-            return res.json({ qr: { id: existente, enlace: urlDelQr(existente, base(req)), monto: null } });
+            return res.json({ qr: { id: existente, enlace: urlDelQr(existente, base(req), { app: true }), monto: null } });
         }
 
         let qr;
@@ -208,7 +208,7 @@ rutasYo.post('/yo/qr', async (req, res) => {
             qr = { id: qrId, monto: monto ? { value: monto, assetCode: moneda.assetCode, assetScale: moneda.assetScale } : null };
         }
         if (fijo) cuentas.guardarQrDelUsuario(usuario.id, qr.id);
-        res.json({ qr: { id: qr.id, enlace: urlDelQr(qr.id, base(req)), monto: qr.monto } });
+        res.json({ qr: { id: qr.id, enlace: urlDelQr(qr.id, base(req), { app: true }), monto: qr.monto } });
     } catch (error) {
         responderError(res, error);
     }

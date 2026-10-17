@@ -153,7 +153,7 @@ rutasSinCuenta.post('/personas', async (req, res) => {
             ...persona,
             conCuenta: false,
             destino: 'efectivo',
-            url: `${raiz}/#cliente?qr=${encodeURIComponent(qrId)}`,
+            url: `${raiz}/demoenvivo/#cliente?qr=${encodeURIComponent(qrId)}`,
             monto: valor ? { value: valor, assetCode: moneda.assetCode, assetScale: moneda.assetScale } : null
         });
     } catch (error) {

@@ -38,7 +38,7 @@ function mostrarAviso(elemento, texto) {
 }
 
 function mostrarQr(qrId, nombre) {
-    const destino = `${location.origin}${location.search}#cliente?qr=${encodeURIComponent(qrId)}`;
+    const destino = `${location.origin}${location.pathname}${location.search}#cliente?qr=${encodeURIComponent(qrId)}`;
     $('[data-qr]').src = urlImagenQr(qrId);
     $('[data-enlace]').href = destino;
     $('[data-enlace]').textContent = destino;
@@ -263,7 +263,7 @@ formQr.addEventListener('submit', async (evento) => {
 
     try {
         const { qrId, url } = await crearQr(cuerpo);
-        const destino = url || `${location.origin}${location.search}#cliente?qr=${encodeURIComponent(qrId)}`;
+        const destino = url || `${location.origin}${location.pathname}${location.search}#cliente?qr=${encodeURIComponent(qrId)}`;
         const nuevo = $('[data-qr-nuevo]');
         nuevo.querySelector('img').src = urlImagenQr(qrId);
         $('[data-enlace-nuevo]').href = destino;

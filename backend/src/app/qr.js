@@ -6,10 +6,13 @@ import * as store from './store.js';
 import { normalizarMeseros } from './reparto.js';
 import { aWalletUrl, esWalletUrl } from './wallet.js';
 
-// URL a la que lleva el QR impreso: abre directo la pestaña Cliente con ese QR.
-export function urlDelQr(qrId, base) {
+export const RUTA_DEMO = '/demoenvivo';
+
+// URL a la que lleva el QR impreso. De la demo: la pestaña Cliente de /demoenvivo. De la app (app: true): su pantalla Pagar.
+export function urlDelQr(qrId, base, { app = false } = {}) {
     const raiz = (process.env.PUBLIC_URL || base).replace(/\/$/, '');
-    return `${raiz}/#cliente?qr=${encodeURIComponent(qrId)}`;
+    const id = encodeURIComponent(qrId);
+    return app ? `${raiz}/#/pagar/${id}` : `${raiz}${RUTA_DEMO}/#cliente?qr=${id}`;
 }
 
 export function imagenQr(texto) {

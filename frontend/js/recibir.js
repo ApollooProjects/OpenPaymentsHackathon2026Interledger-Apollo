@@ -53,7 +53,7 @@ function rellenarDesdePerfil() {
 
 function mostrarResultado(qr, destino) {
     const enlace = seccion.querySelector('[data-enlace-qr]');
-    const url = qr.url || `${location.origin}/#cliente?qr=${encodeURIComponent(qr.qrId)}`;
+    const url = qr.url || `${location.origin}${location.pathname}#cliente?qr=${encodeURIComponent(qr.qrId)}`;
     seccion.querySelector('[data-titulo-qr]').textContent = destino === 'efectivo'
         ? `Código QR para pagarle a ${qr.nombre} en efectivo`
         : `Código QR para pagarle a ${qr.nombre} a su cuenta`;
