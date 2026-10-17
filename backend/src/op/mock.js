@@ -34,6 +34,18 @@ export async function consultarCobro(id) {
     return { id, recibido: { value: cobro.recibido.toString(), ...MONEDA }, completo: cobro.completo };
 }
 
+export async function listarCobros({ walletUrl, cedula } = {}) {
+    return [...cobros.entries()]
+        .filter(([, cobro]) => cobro.walletUrl === walletUrl)
+        .filter(([, cobro]) => cedula === undefined || cobro.metadata?.cedula === cedula)
+        .map(([id, cobro]) => ({
+            id,
+            recibido: { value: cobro.recibido.toString(), ...MONEDA },
+            completo: cobro.completo,
+            metadata: cobro.metadata
+        }));
+}
+
 // Monto mágico para probar el camino de error: un pago de 13 (= $0,13) falla como si no hubiera saldo.
 const MONTO_QUE_FALLA = '13';
 const pagosSalientes = new Map();
@@ -82,4 +94,9 @@ export async function continuarPermiso({ continueUri, continueToken, interactRef
 
 export function verificarHash() {
     return true;
+}
+
+export async function rotar({ token, manageUrl }) {
+    if (!token || !manageUrl) throw new Error('[mock] faltan token o manageUrl para rotar');
+    return { token: `mock-token-${randomUUID()}`, manageUrl: `${BASE}/token/${randomUUID()}` };
 }

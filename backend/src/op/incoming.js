@@ -46,3 +46,29 @@ export async function consultarCobro(id) {
     const cobro = await op.incomingPayment.get({ url: id, accessToken });
     return { id: cobro.id, recibido: cobro.receivedAmount, completo: cobro.completed };
 }
+
+export async function listarCobros({ walletUrl, cedula } = {}) {
+    const wallet = await obtenerWallet(walletUrl);
+    const op = await obtenerCliente();
+    const accessToken = await tokenIncoming(wallet.authServer, ['list', 'read']);
+
+    const cobros = [];
+    let cursor;
+    do {
+        const pagina = await op.incomingPayment.list(
+            { url: wallet.resourceServer, walletAddress: wallet.id, accessToken },
+            { first: 100, ...(cursor && { cursor }) }
+        );
+        cobros.push(...pagina.result);
+        cursor = pagina.pagination.hasNextPage ? pagina.pagination.endCursor : undefined;
+    } while (cursor);
+
+    return cobros
+        .filter((cobro) => cedula === undefined || cobro.metadata?.cedula === cedula)
+        .map((cobro) => ({
+            id: cobro.id,
+            recibido: cobro.receivedAmount,
+            completo: cobro.completed,
+            metadata: cobro.metadata ?? {}
+        }));
+}

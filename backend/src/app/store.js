@@ -22,6 +22,16 @@ db.exec(`
         creado TEXT NOT NULL,
         actualizado TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS permisos (
+        clave TEXT PRIMARY KEY,
+        wallet_url TEXT NOT NULL,
+        token TEXT NOT NULL,
+        manage_url TEXT NOT NULL,
+        tope TEXT NOT NULL,
+        intervalo TEXT,
+        creado TEXT NOT NULL,
+        actualizado TEXT NOT NULL
+    );
 `);
 
 const ahora = () => new Date().toISOString();
@@ -87,4 +97,40 @@ export function actualizarPago(id, cambios) {
 
 export function obtenerPago(id) {
     return filaAPago(db.prepare('SELECT * FROM pagos WHERE id = ?').get(id));
+}
+
+function filaAPermiso(fila) {
+    if (!fila) return null;
+    return {
+        clave: fila.clave,
+        walletUrl: fila.wallet_url,
+        token: fila.token,
+        manageUrl: fila.manage_url,
+        tope: JSON.parse(fila.tope),
+        interval: fila.intervalo,
+        creado: fila.creado,
+        actualizado: fila.actualizado
+    };
+}
+
+export function guardarPermiso({ clave, walletUrl, token, manageUrl, tope, interval = null }) {
+    const momento = ahora();
+    db.prepare(`
+        INSERT INTO permisos (clave, wallet_url, token, manage_url, tope, intervalo, creado, actualizado)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(clave) DO UPDATE SET
+            wallet_url = excluded.wallet_url, token = excluded.token, manage_url = excluded.manage_url,
+            tope = excluded.tope, intervalo = excluded.intervalo, actualizado = excluded.actualizado
+    `).run(clave, walletUrl, token, manageUrl, JSON.stringify(tope), interval, momento, momento);
+    return obtenerPermiso(clave);
+}
+
+export function actualizarTokenPermiso(clave, { token, manageUrl }) {
+    db.prepare('UPDATE permisos SET token = ?, manage_url = ?, actualizado = ? WHERE clave = ?')
+        .run(token, manageUrl, ahora(), clave);
+    return obtenerPermiso(clave);
+}
+
+export function obtenerPermiso(clave) {
+    return filaAPermiso(db.prepare('SELECT * FROM permisos WHERE clave = ?').get(clave));
 }
