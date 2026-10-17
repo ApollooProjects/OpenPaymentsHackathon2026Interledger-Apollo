@@ -296,5 +296,5 @@ rutasYo.get('/op/finish-un-toque', async (req, res) => {
         console.error(error);
         estado = 'fallido';
     }
-    res.redirect(`/#/inicio?unToque=${encodeURIComponent(estado)}`);
+    res.redirect(`/#/perfil?unToque=${encodeURIComponent(estado)}`);
 });
