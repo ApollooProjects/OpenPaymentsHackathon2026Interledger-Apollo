@@ -34,12 +34,14 @@ export async function iniciarPago(plan) {
 
     const destinos = [];
     for (const destino of plan.destinos) {
+        const wallet = await op.obtenerWallet(destino.walletUrl);
+        const monto = { value: String(destino.monto.value), assetCode: wallet.assetCode, assetScale: wallet.assetScale };
         const cobroId = destino.cobroId ?? (await op.crearCobro({
-            walletUrl: destino.walletUrl,
-            monto: destino.monto,
+            walletUrl: wallet.id,
+            monto,
             metadata: { pagoId, destino: destino.nombre, ...destino.metadata }
         })).id;
-        destinos.push({ ...destino, cobroId });
+        destinos.push({ ...destino, walletUrl: wallet.id, monto, cobroId });
     }
 
     const tope = { value: sumar(destinos).toString(), assetCode: pagador.assetCode, assetScale: pagador.assetScale };

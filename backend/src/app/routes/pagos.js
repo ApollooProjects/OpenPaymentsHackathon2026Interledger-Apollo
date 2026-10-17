@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import * as store from '../store.js';
 import * as motor from '../motor.js';
+import * as op from '../../op/index.js';
 
 export const rutasPagos = Router();
 
@@ -17,12 +18,17 @@ function aMonto(entrada) {
     return { value: String(value) };
 }
 
-function qrPublico(qr) {
+async function qrPublico(qr) {
+    let monto = null;
+    if (qr.monto) {
+        const wallet = await op.obtenerWallet(qr.walletUrl);
+        monto = { value: qr.monto, assetCode: wallet.assetCode, assetScale: wallet.assetScale };
+    }
     return {
         qrId: qr.id,
         vendedor: qr.vendedor,
         tipo: qr.tipo,
-        monto: qr.monto,
+        monto,
         meseros: qr.meseros,
         vigenteHasta: qr.vigenteHasta,
         propina: qr.propina
@@ -31,11 +37,11 @@ function qrPublico(qr) {
 
 const vencido = (qr) => qr.vigenteHasta && new Date(qr.vigenteHasta) < new Date();
 
-rutasPagos.get('/qr/:qrId', (req, res) => {
+rutasPagos.get('/qr/:qrId', async (req, res) => {
     const qr = store.obtenerQr(req.params.qrId);
     if (!qr) return res.status(404).json({ error: 'QR no encontrado' });
-    if (vencido(qr)) return res.status(410).json({ error: 'Este QR ya venció', ...qrPublico(qr) });
-    res.json(qrPublico(qr));
+    if (vencido(qr)) return res.status(410).json({ error: 'Este QR ya venció', ...(await qrPublico(qr)) });
+    res.json(await qrPublico(qr));
 });
 
 rutasPagos.post('/pagar/:qrId', async (req, res) => {
