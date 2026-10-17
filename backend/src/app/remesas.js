@@ -113,15 +113,14 @@ export async function enviar({ cotizacionId, app = false } = {}) {
     return resultado;
 }
 
-// Remesa a una wallet: el cobro no tiene monto fijo, así que no se completa solo y la wallet de quien recibe
-// lo muestra pendiente (sin abonar) hasta que vence. Al confirmarse el pago se cierra para que el dinero se abone ya.
-// Los cobros de la Custodia no se tocan: el saldo por cédula y los retiros se calculan sobre ellos.
+// El cobro de una remesa no tiene monto fijo, así que no se completa solo: la wallet que recibe (la del familiar o
+// la Custodia) no abona el dinero hasta que vence. Al confirmarse el pago se cierra para que se abone ya; en la
+// Custodia eso le da liquidez para los retiros. El saldo por cédula no cambia: suma lo recibido, cerrado o no.
 motor.onPagoCompletado(async ({ pagoId }) => {
     const pago = store.obtenerPago(pagoId);
     if (pago?.plan.origen?.tipo !== 'remesa') return;
-    const deCustodia = process.env.CUSTODIA_WALLET ? custodia() : null;
     for (const destino of pago.plan.destinos) {
-        if (!destino.cobroId || destino.walletUrl === deCustodia) continue;
+        if (!destino.cobroId) continue;
         await op.cerrarCobro(destino.cobroId)
             .catch((error) => console.warn(`No se pudo cerrar el cobro de la remesa ${destino.cobroId}: ${error.message}`));
     }
