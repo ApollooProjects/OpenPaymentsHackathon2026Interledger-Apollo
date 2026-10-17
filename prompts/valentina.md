@@ -1,23 +1,5 @@
 # Prompts de Valentina
 
-## 2026-10-16 16:00 · Claude Code (Claude Opus 5.5) · Configuración del espacio de trabajo
-
-```
-Contexto: equipo de 4 en el Open Payments Hackathon (Medellín). La carpeta actual es la carpeta padre del proyecto y NO es un repositorio git. Ya no hay roles fijos (cambio de Raúl en AGENTS.md).
-
-Tareas:
-1. Taildrive: la carpeta compartida está montada en <RUTA>. Contiene `harness/` (instrucciones) y `development/` (notas en vivo).
-   - Crea enlaces simbólicos `harness` y `development` hacia esas rutas. En Windows sin permisos de administrador, omítelo y usa la ruta absoluta.
-   - Lee completos `harness/AGENTS.md` e `harness/IDEA_LA_CAJITA.md`.
-2. Crea `CLAUDE.md` en esta carpeta con una sola línea: `@<RUTA>/harness/CLAUDE.md`.
-3. Con `gh`, clona en `./repo` el repositorio "Open Payments Hackathon 2026" de la organización del equipo en GitHub. Si no existe, detente y avísame.
-   - Dentro del repo no crees `CLAUDE.md` ni copies nada del harness.
-   - Verifica que `.gitignore` incluya `.env`, `private.key`, `*.key` y `node_modules`.
-4. Política de IA: al cerrar cada tarea, registra mi prompt literal en `repo/prompts/<mi-nombre>.md` con fecha, hora y herramienta.
-
-Salida: resumen de máximo 5 líneas con lo configurado y mi primera tarea del tablero.
-```
-
 ## 2026-10-16 16:58 · Claude Code (Claude Opus 5.5) · SDD: remesas por SMS sin app ni cuenta
 
 ```
