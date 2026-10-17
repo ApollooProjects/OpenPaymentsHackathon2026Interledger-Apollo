@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import * as op from '../op/index.js';
 import * as store from './store.js';
 import * as retiros from './retiros.js';
-import { calcularReparto } from './reparto.js';
+import { calcularReparto, normalizarMeseros } from './reparto.js';
 
 const VIGENCIA_CAJITA_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -26,7 +26,10 @@ async function nuevaCajita({ id, cedula, celular }) {
     return { cajitaId: cobro.id, cajitaVence: vence };
 }
 
-export async function crearReparto({ vendedor, proveedorWallet, porcentaje = 35, deuda = null, conCuenta, vendedorWallet, cedula, celular, meseros = [] }) {
+export async function crearReparto({
+    vendedor, proveedorWallet, porcentaje = 35, deuda = null, conCuenta, vendedorWallet, cedula, celular, meseros = [],
+    ahorroWallet = null, ahorroPorcentaje = 0
+}) {
     if (!String(vendedor ?? '').trim()) throw new Error('Falta el nombre del vendedor');
     if (!aUrl(proveedorWallet).startsWith('https://')) throw new Error('Falta la wallet del proveedor');
     const pct = Number(porcentaje);
@@ -34,6 +37,17 @@ export async function crearReparto({ vendedor, proveedorWallet, porcentaje = 35,
     if (deuda !== null && deuda !== undefined && !/^\d+$/.test(String(deuda))) throw new Error('deuda debe ser un entero en centavos');
     if (conCuenta && !aUrl(vendedorWallet).startsWith('https://')) throw new Error('Con cuenta hace falta la wallet del vendedor');
     if (!conCuenta && (!soloDigitos(cedula) || !soloDigitos(celular))) throw new Error('Sin cuenta hacen falta la cédula y el celular');
+    const listaMeseros = normalizarMeseros(meseros);
+
+    const pctAhorro = Number(ahorroPorcentaje || 0);
+    if (!Number.isInteger(pctAhorro) || pctAhorro < 0 || pctAhorro > 100) throw new Error('ahorroPorcentaje debe ser un entero entre 0 y 100');
+    const walletAhorro = pctAhorro > 0 ? aUrl(ahorroWallet) : null;
+    if (pctAhorro > 0) {
+        if (!walletAhorro.startsWith('https://')) throw new Error('Con ahorro hace falta la wallet de ahorro');
+        // En la Custodia el ahorro se sumaría al saldo que se retira con PIN: tiene que ir a otra wallet.
+        if (process.env.CUSTODIA_WALLET && walletAhorro === custodia()) throw new Error('La wallet de ahorro no puede ser la Custodia');
+        await op.obtenerWallet(walletAhorro);
+    }
 
     const id = randomUUID();
     const qrId = `r-${id.slice(0, 8)}`;
@@ -47,7 +61,9 @@ export async function crearReparto({ vendedor, proveedorWallet, porcentaje = 35,
         celular: conCuenta ? null : soloDigitos(celular),
         proveedorWallet: aUrl(proveedorWallet),
         porcentaje: pct,
-        deuda: deuda !== null && deuda !== undefined && BigInt(deuda) > 0n ? String(deuda) : null
+        deuda: deuda !== null && deuda !== undefined && BigInt(deuda) > 0n ? String(deuda) : null,
+        ahorroWallet: walletAhorro,
+        ahorroPorcentaje: pctAhorro
     };
 
     if (reparto.deuda) {
@@ -65,8 +81,8 @@ export async function crearReparto({ vendedor, proveedorWallet, porcentaje = 35,
         id: qrId,
         vendedor: reparto.vendedor,
         walletUrl: reparto.conCuenta ? reparto.vendedorWallet : custodia(),
-        meseros: meseros.map(aUrl),
-        propina: meseros.length > 0
+        meseros: listaMeseros,
+        propina: listaMeseros.length > 0
     });
     return { id, qrId };
 }
@@ -93,8 +109,10 @@ export async function destinosDeVenta(reparto, { monto, propina, meseros = [] })
         propina: propina?.value ?? 0,
         porcentaje: reparto.porcentaje,
         deudaPendiente: await deudaPendiente(reparto),
-        meseros
+        meseros,
+        ahorro: reparto.ahorroWallet ? reparto.ahorroPorcentaje : 0
     });
+    const wallets = meseros.map((m) => (typeof m === 'string' ? m : m.wallet));
 
     return partes.map(({ destino, valor }) => {
         const parte = { value: String(valor) };
@@ -106,7 +124,8 @@ export async function destinosDeVenta(reparto, { monto, propina, meseros = [] })
                 ? { nombre: reparto.vendedor, walletUrl: reparto.vendedorWallet, monto: parte }
                 : { nombre: reparto.vendedor, walletUrl: custodia(), monto: parte, cobroId: reparto.cajitaId };
         }
-        return { nombre: `Mesero ${meseros.indexOf(destino) + 1}`, walletUrl: destino, monto: parte };
+        if (destino === 'ahorro') return { nombre: 'Ahorro', walletUrl: reparto.ahorroWallet, monto: parte };
+        return { nombre: `Mesero ${wallets.indexOf(destino) + 1}`, walletUrl: destino, monto: parte };
     });
 }
 
@@ -150,6 +169,13 @@ export async function resumenReparto(id) {
         // Sin cuenta: el PIN que ya se pidió y todavía no se cobra (el saldo lo sigue incluyendo hasta que se entrega).
         retiroPendiente: reparto.conCuenta ? null : retiros.retiroPendiente(reparto.cedula),
         ventas: ventas.length,
+        ahorro: reparto.ahorroWallet
+            ? {
+                porcentaje: reparto.ahorroPorcentaje,
+                wallet: reparto.ahorroWallet,
+                acumulado: { value: ventas.reduce((t, pago) => t + parteDe(pago, reparto.ahorroWallet), 0n).toString(), ...(await moneda(reparto.ahorroWallet)) }
+            }
+            : null,
         proveedor: {
             pagado: { value: String(pagado), ...monedaProveedor },
             deuda: reparto.deuda ? { value: reparto.deuda, ...monedaProveedor } : null

@@ -138,6 +138,12 @@ formConfigurar.addEventListener('submit', async (evento) => {
         porcentaje: Number(campos.porcentaje.value),
         deuda: deuda?.value,   // el backend la recibe en centavos
     };
+    const pctAhorro = Number(campos.ahorroPorcentaje.value || 0);
+    if (pctAhorro > 0) {
+        cuerpo.ahorroPorcentaje = pctAhorro;
+        cuerpo.ahorroWallet = campos.ahorroWallet.value.trim().replace(/^\$/, 'https://');
+        if (!cuerpo.ahorroWallet.startsWith('https://')) return mostrarAviso(aviso, '⚠ Para ahorrar escribe también la billetera de ahorro. Debe empezar por https:// o por $');
+    }
     if (conCuenta) cuerpo.vendedorWallet = campos.walletVendedor.value.trim().replace(/^\$/, 'https://');
     else Object.assign(cuerpo, { cedula: campos.cedula.value.replace(/\D/g, ''), celular: campos.celular.value.replace(/\D/g, '') });
 
@@ -205,8 +211,13 @@ function vigenciaElegida() {
 formQr.addEventListener('submit', async (evento) => {
     evento.preventDefault();
     const campos = formQr.elements;
-    const meseros = campos.meseros.value.split(/[\s,]+/).map((m) => m.trim().replace(/^\$/, 'https://')).filter(Boolean);
-    if (meseros.some((m) => !m.startsWith('https://'))) return mostrarAviso(aviso, '⚠ Cada billetera de mesero debe empezar por https:// o por $');
+    // "wallet" → partes iguales; "wallet=70" → por porcentaje (C5.1). El backend valida que sumen 100.
+    const meseros = campos.meseros.value.split(/[\s,]+/).filter(Boolean).map((texto) => {
+        const [wallet, porcentaje] = texto.trim().split('=');
+        const url = wallet.replace(/^\$/, 'https://');
+        return porcentaje === undefined ? url : { wallet: url, porcentaje: Number(porcentaje.replace('%', '')) };
+    });
+    if (meseros.some((m) => !(typeof m === 'string' ? m : m.wallet).startsWith('https://'))) return mostrarAviso(aviso, '⚠ Cada billetera de mesero debe empezar por https:// o por $');
 
     const cuerpo = { vendedor: reparto.vendedor, repartoId: reparto.id, tipo: 'personalizado' };
     if (campos.monto.value.trim()) {
@@ -227,7 +238,9 @@ formQr.addEventListener('submit', async (evento) => {
         $('[data-enlace-nuevo]').textContent = destino;
         $('[data-qr-detalle]').textContent = [
             cuerpo.monto ? `${formatearMonto(cuerpo.monto)} · un solo pago` : 'El cliente escribe el monto',
-            meseros.length ? `propina para ${meseros.length} mesero${meseros.length > 1 ? 's' : ''}` : null,
+            meseros.length
+                ? `propina para ${meseros.length} mesero${meseros.length > 1 ? 's' : ''}${typeof meseros[0] === 'object' ? ` (${meseros.map((m) => `${m.porcentaje} %`).join(' / ')})` : ''}`
+                : null,
             vigenteHasta ? `vence ${new Date(vigenteHasta).toLocaleString('es-CO')}` : 'sin vigencia',
         ].filter(Boolean).join(' · ');
         nuevo.hidden = false;

@@ -79,6 +79,15 @@ for (const columna of ['reparto_id TEXT', 'descripcion TEXT']) {
     }
 }
 
+// Ahorro automático (C5.2): wallet y % de la parte del vendedor. Mismo patrón: no borra repartos existentes.
+for (const columna of ['ahorro_wallet TEXT', 'ahorro_porcentaje INTEGER NOT NULL DEFAULT 0']) {
+    try {
+        db.exec(`ALTER TABLE repartos ADD COLUMN ${columna}`);
+    } catch (error) {
+        if (!/duplicate column/i.test(error.message)) throw error;
+    }
+}
+
 const ahora = () => new Date().toISOString();
 
 function filaAQr(fila) {
@@ -209,17 +218,20 @@ function filaAReparto(fila) {
         deuda: fila.deuda,
         deudaCobroId: fila.deuda_cobro_id,
         cajitaId: fila.cajita_id,
-        cajitaVence: fila.cajita_vence
+        cajitaVence: fila.cajita_vence,
+        ahorroWallet: fila.ahorro_wallet ?? null,
+        ahorroPorcentaje: fila.ahorro_porcentaje ?? 0
     };
 }
 
 export function crearReparto(r) {
     db.prepare(`
         INSERT INTO repartos (id, qr_id, vendedor, con_cuenta, vendedor_wallet, cedula, celular, proveedor_wallet,
-            porcentaje, deuda, deuda_cobro_id, cajita_id, cajita_vence, creado)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            porcentaje, deuda, deuda_cobro_id, cajita_id, cajita_vence, ahorro_wallet, ahorro_porcentaje, creado)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(r.id, r.qrId, r.vendedor, r.conCuenta ? 1 : 0, r.vendedorWallet ?? null, r.cedula ?? null, r.celular ?? null,
-        r.proveedorWallet, r.porcentaje, r.deuda ?? null, r.deudaCobroId ?? null, r.cajitaId ?? null, r.cajitaVence ?? null, ahora());
+        r.proveedorWallet, r.porcentaje, r.deuda ?? null, r.deudaCobroId ?? null, r.cajitaId ?? null, r.cajitaVence ?? null,
+        r.ahorroWallet ?? null, r.ahorroPorcentaje ?? 0, ahora());
     return obtenerReparto(r.id);
 }
 

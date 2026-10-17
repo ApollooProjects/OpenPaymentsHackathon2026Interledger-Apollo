@@ -7,11 +7,46 @@ function entero(valor, nombre) {
     return BigInt(texto);
 }
 
-export function calcularReparto({ total, propina = 0, porcentaje = 35, deudaPendiente = null, meseros = [] }) {
+function porcentajeValido(valor, nombre) {
+    const pct = Number(valor);
+    if (!Number.isInteger(pct) || pct < 0 || pct > 100) throw new Error(`${nombre} debe ser un entero entre 0 y 100`);
+    return pct;
+}
+
+function leerMeseros(meseros, { exigirWallet }) {
+    if (!Array.isArray(meseros)) throw new Error('meseros debe ser una lista');
+    const lista = meseros.map((m) => {
+        let wallet = String(typeof m === 'string' ? m : m?.wallet ?? '').trim();
+        if (exigirWallet) {
+            wallet = wallet.replace(/^\$/, 'https://');
+            if (!wallet.startsWith('https://')) throw new Error('Cada mesero debe ser una wallet https:// o $');
+        }
+        const porcentaje = typeof m === 'object' && m?.porcentaje !== undefined && m?.porcentaje !== null && m?.porcentaje !== ''
+            ? porcentajeValido(m.porcentaje, 'El porcentaje de cada mesero')
+            : null;
+        return { wallet, porcentaje };
+    });
+    const conPorcentaje = lista.filter((m) => m.porcentaje !== null).length;
+    if (conPorcentaje === 0) return lista.map((m) => m.wallet);
+    if (conPorcentaje !== lista.length) throw new Error('Si un mesero tiene porcentaje, todos deben tenerlo');
+    if (lista.reduce((t, m) => t + m.porcentaje, 0) !== 100) throw new Error('Los porcentajes de los meseros deben sumar 100');
+    return lista;
+}
+
+// Un mesero es su wallet (partes iguales) o { wallet, porcentaje } (C5.1). Si uno trae porcentaje, todos deben
+// traerlo y sumar 100. Devuelve el formato que se guarda: textos sin porcentaje, objetos con porcentaje.
+export function normalizarMeseros(meseros = []) {
+    return leerMeseros(meseros, { exigirWallet: true });
+}
+
+const walletDe = (mesero) => (typeof mesero === 'string' ? mesero : mesero.wallet);
+
+export function calcularReparto({ total, propina = 0, porcentaje = 35, deudaPendiente = null, meseros = [], ahorro = 0 }) {
     const venta = entero(total, 'total');
     const extra = entero(propina, 'propina');
-    const pct = Number(porcentaje);
-    if (!Number.isInteger(pct) || pct < 0 || pct > 100) throw new Error('porcentaje debe ser un entero entre 0 y 100');
+    const pct = porcentajeValido(porcentaje, 'porcentaje');
+    const pctAhorro = porcentajeValido(ahorro, 'ahorro');
+    const lista = leerMeseros(meseros, { exigirWallet: false });
 
     // Sin deuda configurada, el porcentaje aplica siempre; con deuda, nunca se le paga de más al proveedor.
     let proveedor = (venta * BigInt(pct)) / 100n;
@@ -20,20 +55,25 @@ export function calcularReparto({ total, propina = 0, porcentaje = 35, deudaPend
         if (proveedor > falta) proveedor = falta;
     }
 
+    // C5.2: el ahorro sale de la parte del vendedor en cada venta (no de la propina).
+    const ahorrado = ((venta - proveedor) * BigInt(pctAhorro)) / 100n;
+
     const destinos = [
         { destino: 'proveedor', valor: proveedor },
-        { destino: 'vendedor', valor: venta - proveedor }
+        { destino: 'vendedor', valor: venta - proveedor - ahorrado },
+        { destino: 'ahorro', valor: ahorrado }
     ];
 
-    if (meseros.length === 0) {
+    if (lista.length === 0) {
         destinos[1].valor += extra;
     } else {
-        // Partes iguales; los centavos que sobran van a los primeros meseros para que la suma sea exacta.
-        const n = BigInt(meseros.length);
-        const base = extra / n;
-        const sobrante = extra % n;
-        meseros.forEach((mesero, i) => {
-            destinos.push({ destino: mesero, valor: base + (BigInt(i) < sobrante ? 1n : 0n) });
+        // Partes iguales o por porcentaje; los centavos que sobran van a los primeros meseros para que la suma sea exacta.
+        const partes = lista.map((m) => (typeof m === 'string' ? extra / BigInt(lista.length) : (extra * BigInt(m.porcentaje)) / 100n));
+        let sobrante = extra - partes.reduce((t, p) => t + p, 0n);
+        lista.forEach((mesero, i) => {
+            const centavo = sobrante > 0n ? 1n : 0n;
+            sobrante -= centavo;
+            destinos.push({ destino: walletDe(mesero), valor: partes[i] + centavo });
         });
     }
 

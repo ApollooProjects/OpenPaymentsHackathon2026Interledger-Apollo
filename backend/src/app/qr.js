@@ -3,6 +3,7 @@ import { Router } from 'express';
 import QRCode from 'qrcode';
 import * as op from '../op/index.js';
 import * as store from './store.js';
+import { normalizarMeseros } from './reparto.js';
 
 // URL a la que lleva el QR impreso: abre directo la pestaña Cliente con ese QR.
 export function urlDelQr(qrId, base) {
@@ -13,8 +14,6 @@ export function urlDelQr(qrId, base) {
 export function imagenQr(texto) {
     return QRCode.toString(texto, { type: 'svg', margin: 1, errorCorrectionLevel: 'M' });
 }
-
-const aUrl = (wallet) => String(wallet ?? '').trim().replace(/^\$/, 'https://');
 
 function valorEntero(entrada) {
     const value = typeof entrada === 'object' && entrada !== null ? entrada.value : entrada;
@@ -33,8 +32,9 @@ export async function crearQrPersonalizado({ repartoId, monto, descripcion, mese
         if (!valor) throw new Error('El monto debe ser un entero positivo en centavos');
     }
 
-    const wallets = (Array.isArray(meseros) ? meseros : []).map(aUrl).filter(Boolean);
-    if (wallets.some((w) => !w.startsWith('https://'))) throw new Error('Cada mesero debe ser una wallet https:// o $');
+    // Cada mesero es su wallet (partes iguales) o { wallet, porcentaje } (C5.1, deben sumar 100).
+    const listaMeseros = normalizarMeseros(Array.isArray(meseros) ? meseros.filter(Boolean) : []);
+    const wallets = listaMeseros.map((m) => (typeof m === 'string' ? m : m.wallet));
     // Se valida que cada wallet exista y use la misma moneda que el QR, para que la propina no falle al pagar.
     const qrEstatico = store.obtenerQr(reparto.qrId);
     const moneda = await op.obtenerWallet(qrEstatico.walletUrl);
@@ -63,7 +63,7 @@ export async function crearQrPersonalizado({ repartoId, monto, descripcion, mese
         walletUrl: qrEstatico.walletUrl,
         tipo: 'personalizado',
         monto: valor,
-        meseros: wallets,
+        meseros: listaMeseros,
         vigenteHasta: vence,
         propina: wallets.length > 0,
         repartoId: reparto.id,

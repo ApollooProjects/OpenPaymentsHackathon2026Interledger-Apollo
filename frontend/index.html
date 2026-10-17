@@ -354,6 +354,18 @@
                         <input name="deuda" inputmode="decimal" autocomplete="off">
                     </label>
                 </div>
+                <div class="grid">
+                    <label>
+                        ¿Quieres ahorrar una parte de cada venta? (%, opcional)
+                        <small>10 quiere decir 10 pesos de cada 100 de lo tuyo. Si no, déjalo vacío.</small>
+                        <input name="ahorroPorcentaje" type="number" min="0" max="100" autocomplete="off">
+                    </label>
+                    <label>
+                        Billetera de ahorro
+                        <small>A dónde va lo que ahorras. Empieza por https:// o por $</small>
+                        <input name="ahorroWallet" type="text" inputmode="url" spellcheck="false" autocapitalize="off" autocomplete="off">
+                    </label>
+                </div>
                 <button type="submit">Guardar y ver mi código QR</button>
             </form>
 
@@ -400,7 +412,7 @@
                     </div>
                     <label>
                         Billeteras de los meseros (opcional)
-                        <small>Una por línea. La propina se reparte en partes iguales entre ellos.</small>
+                        <small>Una por línea. La propina se reparte en partes iguales; para repartir por porcentaje escribe la billetera con =70 al final (deben sumar 100).</small>
                         <textarea name="meseros" rows="2" spellcheck="false" autocapitalize="off"></textarea>
                     </label>
                     <label>
