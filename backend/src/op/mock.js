@@ -5,6 +5,16 @@ const BASE = 'https://mock.interledger-test.dev';
 const MONEDA = { assetCode: 'COP', assetScale: 2 };
 const cobros = new Map();
 
+export async function obtenerWallet(walletUrl) {
+    return {
+        id: walletUrl,
+        publicName: walletUrl.split('/').pop(),
+        authServer: `${BASE}/auth`,
+        resourceServer: `${BASE}/resources`,
+        ...MONEDA
+    };
+}
+
 export async function crearCobro({ walletUrl, monto, metadata = {}, expiresAt } = {}) {
     const id = `${BASE}/incoming-payments/${randomUUID()}`;
     cobros.set(id, {
