@@ -2,6 +2,7 @@ import { Router } from 'express';
 import * as store from '../store.js';
 import * as motor from '../motor.js';
 import * as op from '../../op/index.js';
+import { destinoDelQr } from '../sinCuenta.js';
 
 export const rutasPagos = Router();
 
@@ -59,7 +60,8 @@ rutasPagos.post('/pagar/:qrId', async (req, res) => {
         pagador,
         clienteId: req.body?.clienteId ?? null,
         origen: { tipo: 'qr', qrId: qr.id },
-        destinos: [{ nombre: qr.vendedor, walletUrl: qr.walletUrl, monto }]
+        // Sin cuenta, el destino es la Custodia con la cédula y el celular en la metadata (C2.4).
+        destinos: [destinoDelQr(qr, monto)]
     });
     res.json({ pagoId, redirectUrl });
 });

@@ -7,6 +7,8 @@ import { guardarQr } from './store.js';
 import { rutasPagos } from './routes/pagos.js';
 import { rutasQr } from './qr.js';
 import { rutasSms } from './sms.js';
+import { onPagoCompletado } from './motor.js';
+import { avisarLlegada, registrar, rutasSinCuenta } from './sinCuenta.js';
 
 const raiz = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 
@@ -25,6 +27,10 @@ app.get('/salud', (req, res) => {
 
 app.use(rutasPagos);
 app.use(rutasSms);
+app.use(rutasSinCuenta);
+
+// Aviso de llegada (H9): SMS a quien no tiene cuenta cuando su cobro en la Custodia se confirma.
+onPagoCompletado(avisarLlegada);
 
 app.use((error, req, res, next) => {
     console.error(error);
@@ -36,6 +42,16 @@ if (process.env.DEMO_VENDEDOR_WALLET) {
         id: 'demo',
         vendedor: process.env.DEMO_VENDEDOR_NOMBRE || 'Doña Rita',
         walletUrl: process.env.DEMO_VENDEDOR_WALLET.replace(/^\$/, 'https://')
+    });
+}
+
+// QR estático de demo sin cuenta (id "demo-sin-cuenta"): el dinero queda en la Custodia a nombre de esa cédula.
+if (process.env.CUSTODIA_WALLET && process.env.DEMO_SINCUENTA_CEDULA && process.env.DEMO_SINCUENTA_CELULAR) {
+    registrar({
+        qrId: 'demo-sin-cuenta',
+        nombre: process.env.DEMO_SINCUENTA_NOMBRE || 'Don Pedro',
+        cedula: process.env.DEMO_SINCUENTA_CEDULA,
+        celular: process.env.DEMO_SINCUENTA_CELULAR
     });
 }
 

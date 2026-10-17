@@ -115,6 +115,19 @@ export function obtenerPago(pagoId) {
     return pedir('GET', `/pagos/${encodeURIComponent(pagoId)}`);
 }
 
+// Cajero (C2.3): PIN + cédula → paga Custodia → Corresponsal. 202 = el pago sigue en proceso.
+export async function validarRetiro({ pin, cedula }) {
+    if (usaMock()) return { ok: true, estado: 'entregado', monto: { value: '1500000', ...MONEDA_DEMO } };
+    const respuesta = await fetch('/retiros/validar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin, cedula }),
+    });
+    const datos = await respuesta.json().catch(() => ({}));
+    if (respuesta.status === 404 && !datos.error) datos.error = 'El servicio de retiros todavía no está disponible';
+    return { status: respuesta.status, ...datos };
+}
+
 export function urlImagenQr(qrId) {
     return `/qr/${encodeURIComponent(qrId)}/imagen`;
 }

@@ -94,7 +94,22 @@
             </div>
             <p data-aviso hidden></p>
         </section>
-        <section id="cajero" hidden><h2>Cajero</h2></section>
+        <section id="cajero" hidden>
+            <h2>Cajero</h2>
+            <p>Corresponsal: pide la cédula y el PIN que le llegó por SMS a quien retira. Se entrega siempre el saldo total.</p>
+            <form>
+                <label>
+                    Cédula
+                    <input name="cedula" inputmode="numeric" placeholder="1020304050" autocomplete="off" required>
+                </label>
+                <label>
+                    PIN
+                    <input name="pin" inputmode="numeric" placeholder="1234-5678" autocomplete="off" required>
+                </label>
+                <button type="submit">Validar y entregar</button>
+            </form>
+            <article data-resultado hidden></article>
+        </section>
     </main>
     <script>
         const pestanas = document.querySelectorAll('main > section');
@@ -114,5 +129,6 @@
     <script type="module" src="js/recibo.js"></script>
     <script type="module" src="js/vendedor.js"></script>
     <script type="module" src="js/celular.js"></script>
+    <script type="module" src="js/cajero.js"></script>
 </body>
 </html>
