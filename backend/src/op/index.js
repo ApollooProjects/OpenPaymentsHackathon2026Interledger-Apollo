@@ -25,4 +25,5 @@ export const rotar = (...args) => implementacion('rotar')(...args);
 export const cerrarCobro = (...args) => implementacion('cerrarCobro')(...args);
 export const pedirPermiso = (...args) => implementacion('pedirPermiso')(...args);
 export const continuarPermiso = (...args) => implementacion('continuarPermiso')(...args);
+export const revocarPermiso = (...args) => implementacion('revocarPermiso')(...args);
 export const verificarHash = (...args) => implementacion('verificarHash')(...args);

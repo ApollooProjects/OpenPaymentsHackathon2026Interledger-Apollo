@@ -1,6 +1,7 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import * as op from '../op/index.js';
 import * as store from './store.js';
+import * as pagosRapidos from './pagosRapidos.js';
 
 export const ESTADOS = {
     ESPERANDO: 'esperando_consentimiento',
@@ -45,6 +46,18 @@ export async function iniciarPago(plan) {
     }
 
     const tope = { value: sumar(destinos).toString(), assetCode: pagador.assetCode, assetScale: pagador.assetScale };
+
+    // Pagos rápidos (H5c): con permiso vigente y tope suficiente, la compra sale sin pantalla de consentimiento.
+    const rapido = pagosRapidos.permisoUsable(plan.clienteId, pagador.id, tope.value);
+    if (rapido) {
+        store.crearPago({ id: pagoId, estado: ESTADOS.PROCESANDO, pagador: pagador.id, plan: { ...plan, destinos, tope, metodo: 'rapido' } });
+        if (await pagarConPermisoGuardado(pagoId, rapido)) {
+            const pago = await confirmar(pagoId, { intentos: 5 });
+            return { pagoId, estado: pago.estado };
+        }
+        pagosRapidos.marcarVencido(plan.clienteId);
+    }
+
     const clientNonce = randomBytes(16).toString('hex');
     const permiso = await op.pedirPermiso({
         walletUrl: pagador.id,
@@ -53,8 +66,10 @@ export async function iniciarPago(plan) {
         nonce: clientNonce
     });
 
-    store.crearPago({ id: pagoId, estado: ESTADOS.ESPERANDO, pagador: pagador.id, plan: { ...plan, destinos, tope } });
+    const datosPago = { estado: ESTADOS.ESPERANDO, plan: { ...plan, destinos, tope, metodo: 'consentimiento' } };
+    if (!store.obtenerPago(pagoId)) store.crearPago({ id: pagoId, pagador: pagador.id, ...datosPago });
     store.actualizarPago(pagoId, {
+        ...datosPago,
         permiso: {
             continueUri: permiso.continueUri,
             continueToken: permiso.continueToken,
@@ -65,6 +80,55 @@ export async function iniciarPago(plan) {
     });
 
     return { pagoId, redirectUrl: permiso.redirectUrl };
+}
+
+// Paga cada destino con el mismo token. Si renovar existe, un 401 rota el token y reintenta ese destino.
+// El error lleva cuántos destinos alcanzaron a pagarse, para saber si todavía se puede pedir consentimiento.
+async function pagarDestinos(pago, token, renovar) {
+    const destinos = [];
+    for (const destino of pago.plan.destinos) {
+        try {
+            // Un cobro compartido (cajita, deuda del proveedor) recibe de muchas ventas: se anota cuánto tenía antes.
+            const recibidoAntes = destino.compartido ? (await op.consultarCobro(destino.cobroId)).recibido.value : undefined;
+            const pagarCon = (t) => op.pagar({ walletUrl: pago.pagador, token: t, cobroId: destino.cobroId, monto: destino.monto });
+            let saliente;
+            try {
+                saliente = await pagarCon(token);
+            } catch (error) {
+                if (error.status !== 401 || !renovar) throw error;
+                token = await renovar();
+                saliente = await pagarCon(token);
+            }
+            destinos.push({ ...destino, pagoOpId: saliente.id, recibidoAntes });
+        } catch (error) {
+            throw Object.assign(error, { pagados: destinos.length });
+        }
+    }
+    return { destinos, token };
+}
+
+// Devuelve false si el permiso no sirvió antes de mover dinero: entonces se pide consentimiento normal.
+async function pagarConPermisoGuardado(pagoId, rapido) {
+    const pago = store.obtenerPago(pagoId);
+    let { token, manageUrl } = rapido.datos;
+    const renovar = async () => {
+        ({ token, manageUrl } = await op.rotar({ token, manageUrl }));
+        pagosRapidos.actualizarToken(rapido.clienteId, { token, manageUrl });
+        return token;
+    };
+    try {
+        const resultado = await pagarDestinos(pago, token, renovar);
+        store.actualizarPago(pagoId, {
+            estado: ESTADOS.ENVIADO,
+            plan: { ...pago.plan, destinos: resultado.destinos },
+            permiso: { token: resultado.token, manageUrl, rapido: true }
+        });
+        return true;
+    } catch (error) {
+        if (error.pagados === 0) return false;
+        store.actualizarPago(pagoId, { estado: ESTADOS.FALLIDO, error: error.message });
+        return true;
+    }
 }
 
 export async function terminarPago({ pagoId, interactRef, hash, resultado }) {
@@ -99,13 +163,7 @@ export async function terminarPago({ pagoId, interactRef, hash, resultado }) {
         // El mismo token (con acción read) sirve después para saber si un pago saliente falló.
         store.actualizarPago(pagoId, { permiso: { ...permiso, token, manageUrl } });
 
-        const destinos = [];
-        for (const destino of pago.plan.destinos) {
-            // Un cobro compartido (cajita, deuda del proveedor) recibe de muchas ventas: se anota cuánto tenía antes.
-            const recibidoAntes = destino.compartido ? (await op.consultarCobro(destino.cobroId)).recibido.value : undefined;
-            const { id } = await op.pagar({ walletUrl: pago.pagador, token, cobroId: destino.cobroId, monto: destino.monto });
-            destinos.push({ ...destino, pagoOpId: id, recibidoAntes });
-        }
+        const { destinos } = await pagarDestinos(pago, token);
         store.actualizarPago(pagoId, { estado: ESTADOS.ENVIADO, plan: { ...pago.plan, destinos } });
     } catch (error) {
         return resumen(store.actualizarPago(pagoId, { estado: ESTADOS.FALLIDO, error: error.message }));

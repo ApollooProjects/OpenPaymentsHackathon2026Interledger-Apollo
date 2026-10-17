@@ -1,15 +1,30 @@
-// Pestaña Cliente (H3, H5): escanea el QR → escribe el monto → Pagar → consentimiento en su wallet.
-import { alAbrirPestana, aMonto, formatearMonto, iniciarPago, idCliente, obtenerQr, MONEDA_DEMO } from './api.js';
+// Pestaña Cliente (H3, H5, H5b, H5c): escanea el QR → escribe el monto → (propina) → Pagar → consentimiento en su wallet.
+// Con pagos rápidos activos la compra sale sin volver a aprobar.
+import {
+    activarPagosRapidos, alAbrirPestana, aMonto, cancelarPermiso, formatearMonto, iniciarPago, idCliente, obtenerPermiso,
+    obtenerQr, MONEDA_DEMO
+} from './api.js';
+
+// Tope semanal de los pagos rápidos (SDD H5c: "hasta $20.000 por semana").
+const TOPE_RAPIDOS = aMonto('20000', MONEDA_DEMO);
 
 const seccion = document.getElementById('cliente');
 const titulo = seccion.querySelector('[data-vendedor]');
 const formulario = seccion.querySelector('form');
 const campoMonto = formulario.elements.monto;
 const campoPagador = formulario.elements.pagador;
-const boton = formulario.querySelector('button');
+const campoPropinaOtra = formulario.elements.propinaOtra;
+const bloquePropina = seccion.querySelector('[data-propina]');
+const activarRapidos = seccion.querySelector('[data-activar-rapidos]');
+const bloqueRapidos = seccion.querySelector('[data-rapidos]');
+const textoTotal = seccion.querySelector('[data-total]');
+const boton = formulario.querySelector('button[type=submit]');
 const aviso = seccion.querySelector('[data-aviso]');
 
 let qrActual = null;
+let permisoActual = { activo: false };
+
+seccion.querySelector('[data-tope]').textContent = formatearMonto(TOPE_RAPIDOS);
 
 function mostrarAviso(texto) {
     aviso.textContent = texto;
@@ -24,11 +39,87 @@ function pagadorGuardado() {
     try { return localStorage.getItem('cajita.pagador') || ''; } catch { return ''; }
 }
 
+// Mientras el cliente aprueba los pagos rápidos en su wallet se guarda la compra que estaba haciendo,
+// para volver a ella y pagar con un toque.
+function guardarCompraPendiente(datos) {
+    try { sessionStorage.setItem('cajita.compraPendiente', JSON.stringify(datos)); } catch { /* sin almacenamiento */ }
+}
+
+function tomarCompraPendiente() {
+    try {
+        const datos = JSON.parse(sessionStorage.getItem('cajita.compraPendiente') || 'null');
+        sessionStorage.removeItem('cajita.compraPendiente');
+        return datos;
+    } catch {
+        return null;
+    }
+}
+
+const AVISOS_RAPIDOS = {
+    activo: '⚡ Listo: pagos rápidos activos. Toca Pagar y sale sin volver a aprobar.',
+    rechazado: 'No aceptaste los pagos rápidos. Puedes pagar aprobando esta compra.',
+    fallido: 'No se pudieron activar los pagos rápidos. Puedes pagar aprobando esta compra.',
+};
+
+function montoBase() {
+    return qrActual?.monto || aMonto(campoMonto.value, MONEDA_DEMO);
+}
+
+// Propina en la misma moneda que el monto: 10 %, 15 % u otro valor escrito.
+function propinaElegida(base) {
+    if (bloquePropina.hidden || !base) return null;
+    const opcion = formulario.elements.propina.value;
+    if (opcion === 'otro') return aMonto(campoPropinaOtra.value, base);
+    const porcentaje = BigInt(opcion);
+    if (porcentaje === 0n) return null;
+    return { ...base, value: ((BigInt(base.value) * porcentaje) / 100n).toString() };
+}
+
+function actualizarTotal() {
+    const base = montoBase();
+    const propina = propinaElegida(base);
+    campoPropinaOtra.hidden = formulario.elements.propina.value !== 'otro';
+    if (!base) {
+        textoTotal.textContent = '';
+        return;
+    }
+    const total = { ...base, value: (BigInt(base.value) + BigInt(propina?.value || 0)).toString() };
+    const rapido = permisoActual.activo && permisoActual.disponible && BigInt(permisoActual.disponible.value) >= BigInt(total.value);
+    textoTotal.textContent = propina
+        ? `Total: ${formatearMonto(total)} (${formatearMonto(base)} + ${formatearMonto(propina)} de propina)`
+        : `Total: ${formatearMonto(total)}`;
+    boton.textContent = rapido ? `⚡ Pagar ${formatearMonto(total)} sin volver a aprobar` : 'Pagar';
+}
+
+async function cargarPermiso() {
+    try {
+        permisoActual = await obtenerPermiso(idCliente());
+    } catch {
+        permisoActual = { activo: false };
+    }
+    bloqueRapidos.hidden = !permisoActual.activo;
+    activarRapidos.hidden = permisoActual.activo;
+    if (permisoActual.activo) {
+        seccion.querySelector('[data-restante]').textContent = formatearMonto(permisoActual.disponible);
+        seccion.querySelector('[data-tope-activo]').textContent = formatearMonto(permisoActual.tope);
+    }
+    actualizarTotal();
+}
+
 alAbrirPestana('cliente', async (params) => {
+    const resultadoRapidos = params.get('pagosRapidos');
+    const pendiente = resultadoRapidos ? tomarCompraPendiente() : null;
+    // Vuelta de activar pagos rápidos: retomar el QR y el monto que estaba pagando.
+    if (resultadoRapidos && !params.get('qr') && pendiente?.qrId) {
+        guardarCompraPendiente(pendiente);
+        location.hash = `cliente?qr=${encodeURIComponent(pendiente.qrId)}&pagosRapidos=${encodeURIComponent(resultadoRapidos)}`;
+        return;
+    }
     const qrId = params.get('qr');
     qrActual = null;
     mostrarAviso('');
     formulario.hidden = true;
+    bloqueRapidos.hidden = true;
     campoPagador.value = campoPagador.value || pagadorGuardado();
 
     if (!qrId) {
@@ -52,33 +143,78 @@ alAbrirPestana('cliente', async (params) => {
         campoMonto.value = '';
         campoMonto.readOnly = false;
     }
+    // La propina solo tiene sentido si el QR trae meseros a quienes repartirla (H5b).
+    bloquePropina.hidden = !(qrActual.propina || qrActual.meseros?.length);
+    formulario.elements.propina.value = '0';
+    campoPropinaOtra.value = '';
+    formulario.elements.pagosRapidos.checked = false;
+    if (pendiente && !qrActual.monto) campoMonto.value = pendiente.monto || '';
+    if (pendiente?.propina) {
+        formulario.elements.propina.value = pendiente.propina;
+        campoPropinaOtra.value = pendiente.propinaOtra || '';
+    }
     formulario.hidden = false;
+    await cargarPermiso();
+    if (resultadoRapidos) mostrarAviso(AVISOS_RAPIDOS[resultadoRapidos] || `Pagos rápidos: ${resultadoRapidos}`);
+});
+
+formulario.addEventListener('input', actualizarTotal);
+formulario.addEventListener('change', actualizarTotal);
+
+seccion.querySelector('[data-cancelar-rapidos]').addEventListener('click', async () => {
+    try {
+        await cancelarPermiso(idCliente());
+        mostrarAviso('Cancelaste los pagos rápidos. La próxima compra te pedirá aprobación.');
+    } catch (error) {
+        mostrarAviso(`No se pudieron cancelar los pagos rápidos: ${error.message}`);
+    }
+    await cargarPermiso();
 });
 
 formulario.addEventListener('submit', async (evento) => {
     evento.preventDefault();
     mostrarAviso('');
 
-    const monto = qrActual.monto || aMonto(campoMonto.value, MONEDA_DEMO);
+    const monto = montoBase();
     if (!monto) {
         mostrarAviso('Escribe un monto válido.');
         return;
     }
-    const pagador = campoPagador.value.trim();
+    const propina = propinaElegida(monto);
+    if (formulario.elements.propina.value === 'otro' && !bloquePropina.hidden && !propina) {
+        mostrarAviso('Escribe un valor de propina válido o elige otra opción.');
+        return;
+    }
+    const pagador = campoPagador.value.trim().replace(/^\$/, 'https://');
     if (!pagador.startsWith('https://')) {
-        mostrarAviso('Tu wallet address empieza por https:// (no por $).');
+        mostrarAviso('Tu wallet address empieza por https:// o $.');
         return;
     }
     recordarPagador(pagador);
 
+    const cuerpo = { pagador, monto, clienteId: idCliente() };
+    if (propina) cuerpo.propina = propina;
+
     boton.setAttribute('aria-busy', 'true');
     boton.disabled = true;
     try {
-        const respuesta = await iniciarPago(qrActual.qrId, { pagador, monto, clienteId: idCliente() });
+        // Activar pagos rápidos es un consentimiento aparte (tope semanal); al volver, la compra sale con un toque.
+        if (!permisoActual.activo && formulario.elements.pagosRapidos.checked) {
+            guardarCompraPendiente({
+                qrId: qrActual.qrId,
+                monto: campoMonto.value,
+                propina: formulario.elements.propina.value,
+                propinaOtra: campoPropinaOtra.value,
+            });
+            const { redirectUrl } = await activarPagosRapidos({ clienteId: idCliente(), pagador, tope: TOPE_RAPIDOS });
+            location.href = redirectUrl;
+            return;
+        }
+        const respuesta = await iniciarPago(qrActual.qrId, cuerpo);
         if (respuesta.redirectUrl) {
             location.href = respuesta.redirectUrl;   // pantalla de consentimiento de su wallet
         } else {
-            location.hash = `recibo?pago=${encodeURIComponent(respuesta.pagoId)}`;   // pagos rápidos
+            location.hash = `recibo?pago=${encodeURIComponent(respuesta.pagoId)}`;   // pagos rápidos: sin consentimiento
         }
     } catch (error) {
         mostrarAviso(`No se pudo iniciar el pago: ${error.message}`);

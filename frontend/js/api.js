@@ -66,7 +66,9 @@ async function pedir(metodo, ruta, cuerpo) {
     });
     const datos = await respuesta.json().catch(() => ({}));
     if (!respuesta.ok) {
-        const error = new Error(datos.error || `Error ${respuesta.status}`);
+        // 404 sin mensaje del backend = la ruta todavía no existe en este servidor (otra capa sin fusionar).
+        const porDefecto = respuesta.status === 404 ? 'esta función todavía no está disponible en el servidor' : `Error ${respuesta.status}`;
+        const error = new Error(datos.error || porDefecto);
         error.status = respuesta.status;
         throw error;
     }
@@ -75,44 +77,207 @@ async function pedir(metodo, ruta, cuerpo) {
 
 // ---------- Datos falsos (misma forma que el contrato) ----------
 
+// El estado falso vive en sessionStorage para que el reparto, los QR y los pagos rápidos se vean entre pestañas.
+function estadoMock() {
+    try {
+        return JSON.parse(sessionStorage.getItem('cajita.mock') || 'null') || { repartos: {}, qrs: {}, permiso: null, pagos: {} };
+    } catch {
+        return { repartos: {}, qrs: {}, permiso: null, pagos: {} };
+    }
+}
+
+function guardarMock(estado) {
+    try { sessionStorage.setItem('cajita.mock', JSON.stringify(estado)); } catch { /* sin almacenamiento */ }
+}
+
+const pesos = (valor) => ({ value: String(valor), ...MONEDA_DEMO });
+
 const mock = {
     qr(qrId) {
-        return {
-            qrId,
-            vendedor: 'Doña Rita',
-            tipo: 'estatico',
-            monto: null,
-            meseros: [],
-            vigenteHasta: null,
-            propina: false,
+        const guardado = estadoMock().qrs[qrId];
+        if (guardado?.vigenteHasta && new Date(guardado.vigenteHasta) < new Date()) {
+            const error = new Error('Este QR ya venció');
+            error.status = 410;
+            throw error;
+        }
+        return guardado || {
+            qrId, vendedor: 'Doña Rita', tipo: 'estatico', monto: null, meseros: [], vigenteHasta: null, propina: false,
         };
     },
-    pagar(qrId, { monto }) {
-        sessionStorage.setItem('cajita.mock.total', JSON.stringify(monto));
-        return { redirectUrl: `/?mock=1#recibo?pago=mock-${Date.now()}` };
+    pagar(qrId, { monto, propina }) {
+        const estado = estadoMock();
+        const qr = estado.qrs[qrId] || mock.qr(qrId);
+        const reparto = Object.values(estado.repartos).find((r) => r.qrId === qrId || r.id === qr.repartoId);
+        const total = BigInt(monto.value) + BigInt(propina?.value || 0);
+        const destinos = [];
+        let paraVendedor = BigInt(monto.value);
+
+        if (reparto) {
+            const falta = BigInt(reparto.deuda) - BigInt(reparto.pagado);
+            const parte = (BigInt(monto.value) * BigInt(reparto.porcentaje)) / 100n;
+            const alProveedor = falta > 0n ? (parte < falta ? parte : falta) : 0n;
+            if (alProveedor > 0n) destinos.push({ nombre: 'Proveedor', monto: pesos(alProveedor) });
+            paraVendedor -= alProveedor;
+            reparto.pagado = (BigInt(reparto.pagado) + alProveedor).toString();
+            reparto.saldo = (BigInt(reparto.saldo) + paraVendedor).toString();
+            reparto.ventas += 1;
+        }
+        destinos.unshift({ nombre: reparto?.vendedor || qr.vendedor, monto: pesos(paraVendedor) });
+        const meseros = qr.meseros || [];
+        if (propina && meseros.length) {
+            const cada = BigInt(propina.value) / BigInt(meseros.length);
+            meseros.forEach((_, i) => destinos.push({ nombre: `Mesero ${i + 1}`, monto: pesos(cada) }));
+        }
+
+        const pagoId = `mock-${Date.now()}`;
+        estado.pagos[pagoId] = { estado: 'completado', total: pesos(total), destinos };
+
+        // Pagos rápidos vigentes y con tope suficiente: sale sin consentimiento.
+        const permiso = estado.permiso;
+        if (permiso?.activo && BigInt(permiso.disponible.value) >= total) {
+            permiso.disponible = pesos(BigInt(permiso.disponible.value) - total);
+            guardarMock(estado);
+            return { pagoId, estado: 'completado' };
+        }
+        guardarMock(estado);
+        return { redirectUrl: `/?mock=1#recibo?pago=${pagoId}` };
     },
-    pago() {
-        const total = JSON.parse(sessionStorage.getItem('cajita.mock.total') || 'null')
-            || { value: '300000', ...MONEDA_DEMO };
-        return { estado: 'completado', total, destinos: [{ nombre: 'Doña Rita', monto: total }] };
+    pago(pagoId) {
+        return estadoMock().pagos[pagoId]
+            || { estado: 'completado', total: pesos(300000), destinos: [{ nombre: 'Doña Rita', monto: pesos(300000) }] };
+    },
+    crearReparto(cuerpo) {
+        const estado = estadoMock();
+        const id = `mock-reparto-${Date.now()}`;
+        const qrId = `mock-qr-${Date.now()}`;
+        estado.repartos[id] = {
+            id, qrId, vendedor: cuerpo.vendedor, conCuenta: cuerpo.conCuenta, cedula: cuerpo.cedula, celular: cuerpo.celular,
+            porcentaje: cuerpo.porcentaje, deuda: cuerpo.deuda ?? '0', pagado: '0', saldo: '0', ventas: 0,
+        };
+        estado.qrs[qrId] = {
+            qrId, repartoId: id, vendedor: cuerpo.vendedor, tipo: 'estatico', monto: null, meseros: [], vigenteHasta: null, propina: false,
+        };
+        guardarMock(estado);
+        return { id, qrId };
+    },
+    reparto(id) {
+        const r = estadoMock().repartos[id];
+        if (!r) {
+            const error = new Error('Reparto no encontrado');
+            error.status = 404;
+            throw error;
+        }
+        return { saldo: pesos(r.saldo), ventas: r.ventas, proveedor: { pagado: pesos(r.pagado), deuda: r.deuda === '0' ? null : pesos(r.deuda) } };
+    },
+    crearQr(cuerpo) {
+        const estado = estadoMock();
+        const qrId = `mock-qr-${Date.now()}`;
+        estado.qrs[qrId] = {
+            qrId,
+            repartoId: cuerpo.repartoId,
+            vendedor: cuerpo.vendedor,
+            tipo: 'personalizado',
+            monto: cuerpo.monto || null,
+            meseros: cuerpo.meseros || [],
+            vigenteHasta: cuerpo.vigenteHasta || null,
+            propina: (cuerpo.meseros || []).length > 0,
+        };
+        guardarMock(estado);
+        return { qrId, url: `${location.origin}/?mock=1#cliente?qr=${qrId}` };
+    },
+    retirar() {
+        return { ok: true };
+    },
+    permiso() {
+        return estadoMock().permiso || { activo: false, estado: 'sin_permiso' };
+    },
+    activarPermiso({ tope }) {
+        const estado = estadoMock();
+        estado.permiso = { activo: true, estado: 'activo', tope, disponible: tope };
+        guardarMock(estado);
+        return { redirectUrl: '/?mock=1#cliente?pagosRapidos=activo' };
+    },
+    cancelarPermiso() {
+        const estado = estadoMock();
+        estado.permiso = null;
+        guardarMock(estado);
+        return { ok: true };
     },
 };
+
+// Envuelve el mock para que sus errores (410, 404) lleguen igual que los del backend.
+function conMock(fn) {
+    try {
+        return Promise.resolve(fn());
+    } catch (error) {
+        return Promise.reject(error);
+    }
+}
 
 // ---------- Contrato HTTP ----------
 
 export function obtenerQr(qrId) {
-    if (usaMock()) return Promise.resolve(mock.qr(qrId));
+    if (usaMock()) return conMock(() => mock.qr(qrId));
     return pedir('GET', `/qr/${encodeURIComponent(qrId)}`);
 }
 
+// cuerpo: { pagador, monto, propina?, clienteId }
+// → { redirectUrl } (hay que aprobar) o { pagoId, estado } (pagos rápidos vigentes, sin consentimiento)
 export function iniciarPago(qrId, cuerpo) {
-    if (usaMock()) return Promise.resolve(mock.pagar(qrId, cuerpo));
+    if (usaMock()) return conMock(() => mock.pagar(qrId, cuerpo));
     return pedir('POST', `/pagar/${encodeURIComponent(qrId)}`, cuerpo);
 }
 
 export function obtenerPago(pagoId) {
-    if (usaMock()) return Promise.resolve(mock.pago(pagoId));
+    if (usaMock()) return conMock(() => mock.pago(pagoId));
     return pedir('GET', `/pagos/${encodeURIComponent(pagoId)}`);
+}
+
+// Capa 3 (C3.3): { vendedor, conCuenta, vendedorWallet?, cedula?, celular?, proveedorWallet, porcentaje, deuda: "centavos", meseros? }
+export function crearReparto(cuerpo) {
+    if (usaMock()) return conMock(() => mock.crearReparto(cuerpo));
+    return pedir('POST', '/repartos', cuerpo);
+}
+
+// → { saldo: Monto, ventas, proveedor: { pagado: Monto, deuda: Monto | null } }
+export function obtenerReparto(id) {
+    if (usaMock()) return conMock(() => mock.reparto(id));
+    return pedir('GET', `/repartos/${encodeURIComponent(id)}`);
+}
+
+// Capa 3 (C3.5): { vendedor, repartoId?, tipo: 'personalizado', monto?, descripcion?, meseros?: [walletUrl], vigenteHasta? }
+export function crearQr(cuerpo) {
+    if (usaMock()) return conMock(() => mock.crearQr(cuerpo));
+    return pedir('POST', '/qr', cuerpo);
+}
+
+// Retiro desde la app (H7): cambia la cajita y pide el mismo retiro que RETIRAR por SMS; el PIN llega a la bandeja.
+export function retirarReparto(id) {
+    if (usaMock()) return conMock(() => mock.retirar());
+    return pedir('POST', `/repartos/${encodeURIComponent(id)}/retirar`);
+}
+
+// Capa 3 (C3.6): → { activo, estado, tope?: Monto, disponible?: Monto, renueva? }. Sin la ruta, se asume inactivo.
+export async function obtenerPermiso(clienteId) {
+    if (usaMock()) return mock.permiso();
+    try {
+        return await pedir('GET', `/permisos/${encodeURIComponent(clienteId)}`);
+    } catch (error) {
+        if (error.status === 404) return { activo: false };
+        throw error;
+    }
+}
+
+// Activar pagos rápidos (C3.6): { clienteId, pagador, tope } → { redirectUrl } a la pantalla de consentimiento.
+// Al volver, la wallet deja al cliente en /#cliente?pagosRapidos=<activo | rechazado | fallido>.
+export function activarPagosRapidos(cuerpo) {
+    if (usaMock()) return conMock(() => mock.activarPermiso(cuerpo));
+    return pedir('POST', '/permisos', cuerpo);
+}
+
+export function cancelarPermiso(clienteId) {
+    if (usaMock()) return conMock(() => mock.cancelarPermiso());
+    return pedir('DELETE', `/permisos/${encodeURIComponent(clienteId)}`);
 }
 
 // Cajero (C2.3): PIN + cédula → paga Custodia → Corresponsal. 202 = el pago sigue en proceso.

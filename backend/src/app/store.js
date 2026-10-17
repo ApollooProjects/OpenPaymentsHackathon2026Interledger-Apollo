@@ -53,6 +53,15 @@ db.exec(`
         cajita_vence TEXT,
         creado TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS pagos_rapidos (
+        cliente_id TEXT PRIMARY KEY,
+        wallet TEXT NOT NULL,
+        tope TEXT NOT NULL,
+        inicio TEXT NOT NULL,
+        estado TEXT NOT NULL,
+        datos TEXT NOT NULL,
+        actualizado TEXT NOT NULL
+    );
     CREATE TABLE IF NOT EXISTS permisos (
         clave TEXT PRIMARY KEY,
         token TEXT NOT NULL,
@@ -213,6 +222,37 @@ export function cambiarCajita(id, { cajitaId, cajitaVence }) {
 
 export function pagosDelQr(qrId) {
     return db.prepare("SELECT * FROM pagos WHERE json_extract(plan, '$.origen.qrId') = ? ORDER BY creado").all(qrId).map(filaAPago);
+}
+
+// datos: lo que pide el grant según su estado (pendiente: nonces y continuación; activo: token, manageUrl, continuación).
+export function guardarPagosRapidos({ clienteId, wallet, tope, inicio, estado, datos }) {
+    db.prepare(`
+        INSERT INTO pagos_rapidos (cliente_id, wallet, tope, inicio, estado, datos, actualizado) VALUES (?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(cliente_id) DO UPDATE SET wallet = excluded.wallet, tope = excluded.tope, inicio = excluded.inicio,
+            estado = excluded.estado, datos = excluded.datos, actualizado = excluded.actualizado
+    `).run(clienteId, wallet, JSON.stringify(tope), inicio, estado, JSON.stringify(datos), ahora());
+    return obtenerPagosRapidos(clienteId);
+}
+
+export function obtenerPagosRapidos(clienteId) {
+    const fila = db.prepare('SELECT * FROM pagos_rapidos WHERE cliente_id = ?').get(clienteId);
+    if (!fila) return null;
+    return {
+        clienteId: fila.cliente_id,
+        wallet: fila.wallet,
+        tope: JSON.parse(fila.tope),
+        inicio: fila.inicio,
+        estado: fila.estado,
+        datos: JSON.parse(fila.datos)
+    };
+}
+
+export function pagosRapidosDesde(clienteId, desde) {
+    return db.prepare(`
+        SELECT * FROM pagos
+        WHERE json_extract(plan, '$.clienteId') = ? AND json_extract(plan, '$.metodo') = 'rapido'
+            AND estado IN ('procesando', 'enviado', 'completado') AND creado >= ?
+    `).all(clienteId, desde).map(filaAPago);
 }
 
 export function guardarPermiso(clave, { token, manageUrl }) {

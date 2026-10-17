@@ -51,12 +51,29 @@
                     Monto
                     <input name="monto" inputmode="decimal" placeholder="$ 3.000" autocomplete="off" required>
                 </label>
+                <fieldset data-propina hidden>
+                    <legend>Propina para los meseros</legend>
+                    <label><input type="radio" name="propina" value="0" checked> Sin propina</label>
+                    <label><input type="radio" name="propina" value="10"> 10 %</label>
+                    <label><input type="radio" name="propina" value="15"> 15 %</label>
+                    <label><input type="radio" name="propina" value="otro"> Otro valor</label>
+                    <input name="propinaOtra" inputmode="decimal" placeholder="$ 1.000" aria-label="Otro valor de propina" hidden>
+                </fieldset>
                 <label>
                     Tu wallet address
                     <input name="pagador" type="url" placeholder="https://ilp.interledger-test.dev/tu-wallet" autocomplete="off" required>
                 </label>
+                <label data-activar-rapidos>
+                    <input type="checkbox" name="pagosRapidos" role="switch">
+                    Pagos rápidos de barrio: aprueba una vez hasta <span data-tope></span> por semana y paga con un toque
+                </label>
+                <p data-total></p>
                 <button type="submit">Pagar</button>
             </form>
+            <article data-rapidos hidden>
+                ⚡ Pagos rápidos activos: te quedan <strong data-restante></strong> de <span data-tope-activo></span> esta semana.
+                <button type="button" class="secondary outline" data-cancelar-rapidos>Cancelar pagos rápidos</button>
+            </article>
             <p data-aviso hidden></p>
         </section>
         <section id="recibo" hidden>
@@ -67,9 +84,76 @@
         </section>
         <section id="vendedor" hidden>
             <h2>Vendedor</h2>
-            <p data-nombre>QR del puesto</p>
-            <img alt="QR para pagar en este puesto" width="260" height="260">
+
+            <form data-configurar hidden>
+                <p>Configura tu reparto: una parte de cada venta le llega directo a tu proveedor hasta saldar lo que te fió.</p>
+                <label>Tu nombre <input name="vendedor" placeholder="Doña Rita" required></label>
+                <fieldset>
+                    <label><input type="radio" name="conCuenta" value="no" checked> No tengo cuenta: retiro en efectivo con PIN</label>
+                    <label><input type="radio" name="conCuenta" value="si"> Tengo cuenta: me llega directo a mi wallet</label>
+                </fieldset>
+                <div data-sin-cuenta class="grid">
+                    <label>Cédula <input name="cedula" inputmode="numeric" placeholder="1020304050"></label>
+                    <label>Celular <input name="celular" inputmode="tel" placeholder="3001234567"></label>
+                </div>
+                <label data-con-cuenta hidden>Tu wallet address <input name="walletVendedor" type="url" placeholder="https://ilp.interledger-test.dev/tu-wallet"></label>
+                <label>Wallet de tu proveedor <input name="proveedorWallet" type="url" placeholder="https://ilp.interledger-test.dev/proveedor" required></label>
+                <div class="grid">
+                    <label>% para el proveedor <input name="porcentaje" type="number" min="1" max="100" value="35" required></label>
+                    <label>Deuda a saldar (opcional) <input name="deuda" inputmode="decimal" placeholder="$ 40.000"></label>
+                </div>
+                <button type="submit">Crear mi reparto</button>
+            </form>
+
+            <div data-panel hidden>
+                <article>
+                    <header><strong data-nombre>Mi cajita</strong></header>
+                    <p>Hoy llevas <strong data-saldo>$ 0</strong> · <span data-ventas>0</span> ventas</p>
+                    <p>
+                        Proveedor: <span data-pagado>$ 0</span> / <span data-deuda>$ 0</span> <span data-saldada hidden>✔ deuda saldada</span>
+                        <progress data-barra value="0" max="1"></progress>
+                    </p>
+                    <button type="button" data-retirar>Retirar todo en efectivo</button>
+                    <p data-aviso-retiro hidden></p>
+                </article>
+            </div>
+
+            <h3>QR del puesto</h3>
+            <p data-qr-nombre>QR del puesto</p>
+            <img data-qr alt="QR para pagar en este puesto" width="260" height="260">
             <p><small>Lleva a: <a data-enlace></a></small></p>
+
+            <details data-personalizado hidden>
+                <summary>Generar QR personalizado (monto, meseros, vigencia)</summary>
+                <form>
+                    <div class="grid">
+                        <label>Monto (opcional) <input name="monto" inputmode="decimal" placeholder="$ 9.000"></label>
+                        <label>Descripción (opcional) <input name="descripcion" placeholder="3 empanadas"></label>
+                    </div>
+                    <label>
+                        Wallets de los meseros (opcional, una por línea): la propina se reparte entre ellos
+                        <textarea name="meseros" rows="2" placeholder="https://ilp.interledger-test.dev/mesero1"></textarea>
+                    </label>
+                    <label>
+                        Vigencia (opcional)
+                        <select name="vigencia">
+                            <option value="">Sin vigencia</option>
+                            <option value="hoy">Hasta el final del día</option>
+                            <option value="turno">Un turno (8 horas)</option>
+                            <option value="fecha">Hasta una fecha…</option>
+                        </select>
+                    </label>
+                    <label data-fecha hidden>Vence <input name="vigenteHasta" type="datetime-local"></label>
+                    <button type="submit">Generar QR</button>
+                </form>
+                <div data-qr-nuevo hidden>
+                    <img alt="QR personalizado" width="220" height="220">
+                    <p><small data-qr-detalle></small><br><small>Lleva a: <a data-enlace-nuevo></a></small></p>
+                </div>
+            </details>
+
+            <p><small><a href="#vendedor?reparto=nuevo" data-cambiar hidden>Configurar otro reparto</a></small></p>
+            <p data-aviso hidden></p>
         </section>
         <section id="remitente" hidden><h2>Remitente</h2></section>
         <section id="celular" hidden>

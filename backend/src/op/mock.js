@@ -41,6 +41,7 @@ export async function listarCobros({ walletUrl, cedula } = {}) {
 }
 
 export async function rotar({ token, manageUrl }) {
+    if (tokensRevocados.has(token)) throw Object.assign(new Error('[mock] token revocado'), { status: 401 });
     return { token: `mock-token-${randomUUID()}`, manageUrl: manageUrl ?? `${BASE}/token/${randomUUID()}` };
 }
 
@@ -60,10 +61,19 @@ export async function consultarCobro(id) {
 const MONTO_QUE_FALLA = '13';
 const pagosSalientes = new Map();
 
+// Tokens de prueba: los que empiezan por "mock-vencido" responden 401 (hay que rotar); los revocados, 401 siempre.
+const tokensRevocados = new Set();
+const tokenDelGrant = new Map();
+
+function errorHttp(status, mensaje) {
+    return Object.assign(new Error(mensaje), { status });
+}
+
 export async function pagar({ walletUrl, token, cobroId, monto }) {
     const cobro = cobros.get(cobroId);
     if (!cobro) throw new Error(`[mock] cobro no encontrado: ${cobroId}`);
     if (!token) throw new Error('[mock] falta el token del permiso');
+    if (token.startsWith('mock-vencido') || tokensRevocados.has(token)) throw errorHttp(401, '[mock] token inválido');
     const id = `${BASE}/outgoing-payments/${randomUUID()}`;
     const fallido = String(monto.value) === MONTO_QUE_FALLA;
     pagosSalientes.set(id, { fallido, valor: String(monto.value) });
@@ -99,7 +109,14 @@ export async function pedirPermiso({ walletUrl, tope, interval, finishUri, nonce
 }
 
 export async function continuarPermiso({ continueUri, continueToken, interactRef }) {
-    return { token: `mock-token-${randomUUID()}`, manageUrl: `${BASE}/token/${randomUUID()}` };
+    const token = `mock-token-${randomUUID()}`;
+    tokenDelGrant.set(continueUri, token);
+    return { token, manageUrl: `${BASE}/token/${randomUUID()}`, continueUri, continueToken };
+}
+
+export async function revocarPermiso({ continueUri }) {
+    const token = tokenDelGrant.get(continueUri);
+    if (token) tokensRevocados.add(token);
 }
 
 export function verificarHash() {
