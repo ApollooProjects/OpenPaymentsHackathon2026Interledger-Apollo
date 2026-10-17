@@ -9,7 +9,11 @@
 // SMSGATE_URL (opcional, por defecto el servidor en la nube).
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { Router } from 'express';
+import { db } from './db.js';
 import * as sms from './sms.js';
+
+// El gateway reintenta si no recibe 2xx a tiempo: cada SMS entrante se procesa una sola vez (por su messageId).
+db.exec('CREATE TABLE IF NOT EXISTS sms_gateway_vistos (message_id TEXT PRIMARY KEY, hora TEXT NOT NULL)');
 
 const URL_NUBE = 'https://api.sms-gate.app/3rdparty/v1';
 const VENTANA_FIRMA_S = 5 * 60;
@@ -76,6 +80,11 @@ rutasSmsReal.post('/sms/gateway', async (req, res) => {
     if (!permitido(payload.sender)) {
         console.warn(`[SMS real] ignorado: ${payload.sender} no está en SMSGATE_PERMITIDOS`);
         return res.json({ ok: true, ignorado: 'no permitido' });
+    }
+    if (payload.messageId) {
+        const { changes } = db.prepare('INSERT OR IGNORE INTO sms_gateway_vistos (message_id, hora) VALUES (?, ?)')
+            .run(String(payload.messageId), new Date().toISOString());
+        if (changes === 0) return res.json({ ok: true, ignorado: 'repetido' });
     }
     await sms.procesarEntrante(payload.sender, payload.message);
     res.json({ ok: true });
