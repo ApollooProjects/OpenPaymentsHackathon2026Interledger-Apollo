@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>La Cajita</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <style>
+        /* En el celular las pestañas bajan de línea en vez de salirse de la pantalla. */
+        header nav { flex-wrap: wrap; }
+        header nav ul:last-child { flex-wrap: wrap; }
+        #vendedor img { max-width: 100%; height: auto; }
+    </style>
 </head>
 <body>
     <header class="container">
@@ -23,9 +29,34 @@
         </nav>
     </header>
     <main class="container">
-        <section id="cliente" hidden><h2>Cliente</h2></section>
-        <section id="recibo" hidden><h2>Recibo</h2></section>
-        <section id="vendedor" hidden><h2>Vendedor</h2></section>
+        <section id="cliente" hidden>
+            <h2>Cliente</h2>
+            <p data-vendedor>Escanea el QR del vendedor para pagar.</p>
+            <form hidden>
+                <label>
+                    Monto
+                    <input name="monto" inputmode="decimal" placeholder="$ 3.000" autocomplete="off" required>
+                </label>
+                <label>
+                    Tu wallet address
+                    <input name="pagador" type="url" placeholder="https://ilp.interledger-test.dev/tu-wallet" autocomplete="off" required>
+                </label>
+                <button type="submit">Pagar</button>
+            </form>
+            <p data-aviso hidden></p>
+        </section>
+        <section id="recibo" hidden>
+            <h2>Recibo</h2>
+            <p data-estado>Todavía no hay un pago para mostrar.</p>
+            <h3 data-total></h3>
+            <ul data-destinos></ul>
+        </section>
+        <section id="vendedor" hidden>
+            <h2>Vendedor</h2>
+            <p data-nombre>QR del puesto</p>
+            <img alt="QR para pagar en este puesto" width="260" height="260">
+            <p><small>Lleva a: <a data-enlace></a></small></p>
+        </section>
         <section id="remitente" hidden><h2>Remitente</h2></section>
         <section id="celular" hidden><h2>Celular</h2></section>
         <section id="cajero" hidden><h2>Cajero</h2></section>
@@ -38,10 +69,14 @@
             pestanas.forEach((seccion) => {
                 seccion.hidden = seccion.id !== nombre;
             });
+            window.scrollTo(0, 0);
         }
 
         window.addEventListener('hashchange', mostrarPestana);
         mostrarPestana();
     </script>
+    <script type="module" src="js/cliente.js"></script>
+    <script type="module" src="js/recibo.js"></script>
+    <script type="module" src="js/vendedor.js"></script>
 </body>
 </html>
