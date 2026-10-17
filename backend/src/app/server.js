@@ -15,6 +15,7 @@ import { onPagoCompletado } from './motor.js';
 import { avisarLlegada, registrar, rutasSinCuenta } from './sinCuenta.js';
 import './conexiones.js';
 import { rutasSmsReal } from './smsReal.js';
+import { mensajeParaUsuario } from './errores.js';
 
 const raiz = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 
@@ -50,7 +51,7 @@ onPagoCompletado(avisarLlegada);
 
 app.use((error, req, res, next) => {
     console.error(error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: mensajeParaUsuario(error) });
 });
 
 if (process.env.DEMO_VENDEDOR_WALLET) {

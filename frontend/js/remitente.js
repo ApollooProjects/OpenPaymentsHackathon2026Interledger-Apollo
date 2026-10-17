@@ -23,9 +23,13 @@ function recordarRemitente(valor) {
     try { localStorage.setItem('cajita.remitente', valor); } catch { /* sin almacenamiento */ }
 }
 
-// "50" o "50,25" → { value: "5000" | "5025", assetScale: 2 }. La moneda la pone el backend según la wallet.
+// "50", "50,25", "50.25" o "1.250,50" → { value: "5000" | "5025" | "125050", assetScale: 2 }. La moneda la pone el backend.
+// Un separador seguido de 1 o 2 dígitos al final es el decimal (quien envía desde afuera escribe "50.25"); los demás son de miles.
 function aMontoRemitente(texto) {
-    const limpio = String(texto).trim().replace(/\./g, '').replace(',', '.');
+    const crudo = String(texto).trim().replace(/[^\d.,]/g, '');
+    const decimal = /[.,](\d{1,2})$/.exec(crudo);
+    const entero = (decimal ? crudo.slice(0, decimal.index) : crudo).replace(/[.,]/g, '');
+    const limpio = decimal ? `${entero || '0'}.${decimal[1]}` : entero;
     const numero = Number(limpio);
     if (!limpio || !Number.isFinite(numero) || numero <= 0) return null;
     return { value: Math.round(numero * 100).toString(), assetScale: 2 };
@@ -86,7 +90,8 @@ formulario.addEventListener('submit', async (evento) => {
             / (Number(cotizacionActual.cobra.value) / 10 ** cotizacionActual.cobra.assetScale);
         seccion.querySelector('[data-tasa]').textContent = cotizacionActual.cobra.assetCode === cotizacionActual.llega.assetCode
             ? 'Misma moneda: sin cambio.'
-            : `1 ${cotizacionActual.cobra.assetCode} ≈ ${tasa.toLocaleString('es-CO', { maximumFractionDigits: 2 })} ${cotizacionActual.llega.assetCode}, ya incluye lo que cobra la red.`;
+            : `Tasa efectiva: 1 ${cotizacionActual.cobra.assetCode} ≈ ${tasa.toLocaleString('es-CO', { maximumFractionDigits: 2 })} ${cotizacionActual.llega.assetCode}. `
+                + 'La diferencia es el cambio de moneda más la comisión de la red, y la pagas tú: a quien recibe le llega exactamente ese monto, sin descuentos.';
         formulario.hidden = true;
         cotizacion.hidden = false;
     } catch (error) {

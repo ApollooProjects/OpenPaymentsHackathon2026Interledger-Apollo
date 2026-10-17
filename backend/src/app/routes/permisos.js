@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import * as pagosRapidos from '../pagosRapidos.js';
+import { mensajeParaUsuario } from '../errores.js';
 
 export const rutasPermisos = Router();
 
@@ -8,7 +9,8 @@ rutasPermisos.post('/permisos', async (req, res) => {
     try {
         res.json(await pagosRapidos.activar(req.body ?? {}));
     } catch (error) {
-        res.status(400).json({ error: error.message });
+        console.error('POST /permisos:', error);
+        res.status(400).json({ error: mensajeParaUsuario(error, 'pago') });
     }
 });
 
