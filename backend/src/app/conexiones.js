@@ -2,6 +2,7 @@
 // y el menú SMS (SALDO / RETIRAR) usa la lógica real de retiros.
 import * as sms from './sms.js';
 import * as retiros from './retiros.js';
+import * as repartos from './repartos.js';
 
 retiros.usarSms(async (celular, texto) => {
     if (sms.normalizarCelular(celular)) sms.enviar(celular, texto);
@@ -17,7 +18,7 @@ sms.usarManejadores({
     },
     // solicitar() ya manda por SMS el PIN o el aviso de "sin saldo"; aquí solo falta el caso de quien no tiene dinero.
     retirar: async ({ celular }) => {
-        const resultado = await retiros.solicitar({ celular });
+        const resultado = await repartos.solicitarRetiro({ celular });
         if (!resultado.ok && resultado.error === 'No hay dinero a tu nombre') return 'La Cajita: todavía no tienes dinero a tu nombre. Te avisaremos por SMS cuando te llegue.';
     }
 });

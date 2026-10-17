@@ -1,12 +1,13 @@
 import { Router } from 'express';
 import * as retiros from '../retiros.js';
+import * as repartos from '../repartos.js';
 
 export const rutasRetiros = Router();
 
 rutasRetiros.post('/retiros', async (req, res) => {
     const { cedula, celular } = req.body ?? {};
     if (!cedula && !celular) return res.status(400).json({ ok: false, error: 'Falta la cédula o el celular' });
-    const resultado = await retiros.solicitar({ cedula, celular });
+    const resultado = await repartos.solicitarRetiro({ cedula, celular });
     res.status(resultado.ok ? 200 : 404).json(resultado);
 });
 
