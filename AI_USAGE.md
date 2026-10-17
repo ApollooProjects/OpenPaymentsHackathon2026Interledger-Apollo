@@ -11,7 +11,8 @@
   | Raúl | Claude Sonnet 5.5 | 104 | 117.439 | 518.377 | 11.204.692 | USD 5,49 |
   | Valentina | Claude Opus 5.5 | 1.166 | 555.824 | 4.634.209 | 245.553.818 | USD 97,31 |
   | Angélica | Claude Opus 5.5 | 1.650 | 592.649 | 3.221.279 | 230.665.130 | USD 83,76 |
-  | **Total** | | | | | | **USD 314,75** |
+  | Sofía | Claude Opus 5.5 | 1.102 | 350.721 | 3.075.621 | 212.636.490 | USD 74,15 |
+  | **Total** | | | | | | **USD 388,90** |
 
   Al ser planes de suscripción, el costo real es el de los planes, no el equivalente de API.
 
