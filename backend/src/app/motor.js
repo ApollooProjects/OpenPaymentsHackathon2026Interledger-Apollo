@@ -82,7 +82,7 @@ export async function iniciarPago(plan) {
     return { pagoId, redirectUrl: permiso.redirectUrl };
 }
 
-// Paga cada destino con el mismo token. Si renovar existe, un 401 rota el token y reintenta ese destino.
+// Paga cada destino con el mismo token. Si renovar existe, un token vencido (401, o 403 "Inactive Token" del testnet) rota el token y reintenta ese destino.
 // El error lleva cuántos destinos alcanzaron a pagarse, para saber si todavía se puede pedir consentimiento.
 async function pagarDestinos(pago, token, renovar) {
     const destinos = [];
@@ -95,7 +95,7 @@ async function pagarDestinos(pago, token, renovar) {
             try {
                 saliente = await pagarCon(token);
             } catch (error) {
-                if (error.status !== 401 || !renovar) throw error;
+                if ((error.status !== 401 && error.status !== 403) || !renovar) throw error;
                 token = await renovar();
                 saliente = await pagarCon(token);
             }
