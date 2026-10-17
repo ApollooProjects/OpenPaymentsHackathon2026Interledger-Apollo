@@ -3,15 +3,16 @@
 ## Herramientas usadas
 - **Claude Code** (modelos Claude Opus 5.5 y, en algunas tareas de apoyo, Claude Sonnet 5.5). Todo el equipo lo usó.
 - Planes pagados: **2 cuentas de USD 20/mes y 1 cuenta de USD 100/mes** (USD 140 en suscripciones).
-- Consumo medido en la máquina de Raúl (30 sesiones de Claude Code del proyecto, 16–17 de octubre):
+- Consumo de Claude Code en el proyecto (16–17 de octubre), medido en el computador de cada integrante:
 
-  | Modelo | Entrada | Salida | Escritura de caché | Lectura de caché | Equivalente a precio de API |
-  |---|---|---|---|---|---|
-  | Claude Opus 5.5 | 3.628 | 1.160.528 | 4.643.460 | 339.099.424 | USD 128,19 |
-  | Claude Sonnet 5.5 | 104 | 117.439 | 518.377 | 11.204.692 | USD 5,49 |
-  | **Total** | | | | | **USD 133,68** |
+  | Integrante | Modelo | Entrada | Salida | Escritura de caché | Lectura de caché | Equivalente a precio de API |
+  |---|---|---|---|---|---|---|
+  | Raúl | Claude Opus 5.5 | 3.628 | 1.160.528 | 4.643.460 | 339.099.424 | USD 128,19 |
+  | Raúl | Claude Sonnet 5.5 | 104 | 117.439 | 518.377 | 11.204.692 | USD 5,49 |
+  | Valentina | Claude Opus 5.5 | 1.166 | 555.824 | 4.634.209 | 245.553.818 | USD 97,31 |
+  | **Total** | | | | | | **USD 230,99** |
 
-  Las sesiones de las otras cuentas no están incluidas en esta tabla. Al ser planes de suscripción, el costo real es el de los planes, no el equivalente de API.
+  Al ser planes de suscripción, el costo real es el de los planes, no el equivalente de API.
 
 ## Dónde y cómo usamos IA
 **Se usó IA en todo el proyecto.** No hay ningún archivo del repositorio que podamos asegurar que se escribió sin ayuda de IA. Detalle por componente:
