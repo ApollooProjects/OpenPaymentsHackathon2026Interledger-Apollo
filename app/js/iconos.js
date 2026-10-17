@@ -28,6 +28,10 @@ const trazos = {
     enlace: '<path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/>',
     mas: '<path d="M12 5v14M5 12h14"/>',
     cerrar: '<path d="M6 6l12 12M18 6L6 18"/>',
+    usuarios: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.5 3-5.5 6.5-5.5s6.5 2 6.5 5.5"/><path d="M16 4.5a3.5 3.5 0 010 7M18 14.8c2.2.6 3.5 2.4 3.5 5.2"/>',
+    alcancia: '<path d="M5 11a7 6 0 0113 -1.5h1.5a1.5 1.5 0 011.5 1.5v2a1.5 1.5 0 01-1.5 1.5H18a7 6 0 01-2 2.5V20h-3v-1.6a8 8 0 01-3 0V20H7v-2.5A6 6 0 015 11z"/><path d="M10 6.5V4h3v2.5"/><circle cx="15" cy="11" r=".6"/>',
+    repartir: '<circle cx="12" cy="5" r="2.5"/><path d="M12 7.5V12M12 12l-6 5M12 12l6 5M12 12v5"/><circle cx="5" cy="19" r="2"/><circle cx="12" cy="19" r="2"/><circle cx="19" cy="19" r="2"/>',
+    rayo: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
     luna: '<path d="M20 15A8 8 0 019 4a8 8 0 1011 11z"/>'
 };
 

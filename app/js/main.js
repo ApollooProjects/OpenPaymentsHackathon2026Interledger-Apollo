@@ -5,6 +5,7 @@ import { esc } from './ui.js';
 import * as acceso from './pantallas-acceso.js';
 import * as cuenta from './pantallas-cuenta.js';
 import * as acciones from './pantallas-acciones.js';
+import * as repartos from './pantallas-repartos.js';
 
 const raiz = document.getElementById('pantalla');
 const barra = document.getElementById('barra');
@@ -24,7 +25,11 @@ const RUTAS = [
     { patron: /^pagar(?:\/([\w-]+))?$/, pantalla: acciones.pagar, menu: 'pagar' },
     { patron: /^enviar$/, pantalla: acciones.enviar, menu: 'inicio' },
     { patron: /^retirar$/, pantalla: acciones.retirar, menu: 'inicio' },
-    { patron: /^pago\/([\w-]+)$/, pantalla: acciones.pago, menu: 'movimientos' }
+    { patron: /^pago\/([\w-]+)$/, pantalla: acciones.pago, menu: 'movimientos' },
+    { patron: /^repartos$/, pantalla: repartos.repartos, menu: 'inicio' },
+    { patron: /^repartos\/recibido$/, pantalla: repartos.recibido, menu: 'inicio' },
+    { patron: /^repartos\/nuevo$/, pantalla: repartos.nuevo, menu: 'inicio' },
+    { patron: /^reparto\/([\w-]+)$/, pantalla: repartos.detalle, menu: 'inicio' }
 ];
 
 const MENU = [

@@ -43,7 +43,16 @@ const apiReal = {
     verPago: (pagoId) => pedir('GET', `/pagos/${encodeURIComponent(pagoId)}`),
     cotizarRemesa: (datos) => pedir('POST', '/remesas/cotizar', datos),
     enviarRemesa: (cotizacionId) => pedir('POST', '/remesas', { cotizacionId, app: true }),
-    pedirRetiro: (cedula) => pedir('POST', '/retiros', { cedula })
+    pedirRetiro: (cedula) => pedir('POST', '/retiros', { cedula }),
+    // Repartos automáticos (fase 2)
+    repartos: () => pedir('GET', '/yo/repartos'),
+    crearReparto: (datos) => pedir('POST', '/yo/repartos', datos),
+    qrDeReparto: (id, datos) => pedir('POST', `/yo/repartos/${encodeURIComponent(id)}/qr`, datos ?? {}),
+    recibidoPorRepartos: () => pedir('GET', '/yo/recibido-por-repartos'),
+    // Pagos con un toque: permiso de Open Payments con tope semanal; el cliente es el usuario de la sesión.
+    estadoUnToque: (clienteId) => pedir('GET', `/permisos/${encodeURIComponent(clienteId)}`),
+    activarUnToque: (clienteId, pagador, tope) => pedir('POST', '/permisos', { clienteId, pagador, tope, app: true }),
+    cancelarUnToque: (clienteId) => pedir('DELETE', `/permisos/${encodeURIComponent(clienteId)}`)
 };
 
 export const api = apiReal;

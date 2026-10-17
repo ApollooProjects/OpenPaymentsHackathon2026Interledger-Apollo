@@ -180,7 +180,7 @@ function pasoNombre({ raiz, api, ir, recargarUsuario, usuario }) {
         <p class="suave">Así te verán las personas que te paguen.</p>
         <form id="form" novalidate>
             <div class="campo">
-                <label for="nombre">Tu nombre o el de tu negocio</label>
+                <label for="nombre">Tu nombre o el de tu puesto</label>
                 <input class="entrada" id="nombre" autocomplete="name" maxlength="40" placeholder="Ej.: Ana Gómez" value="${esc(usuario?.nombre ?? '')}" aria-describedby="error">
                 <span class="mensaje-error" id="error" aria-live="polite"></span>
             </div>

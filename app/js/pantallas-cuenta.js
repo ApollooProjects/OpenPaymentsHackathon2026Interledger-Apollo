@@ -1,5 +1,6 @@
 // Inicio, movimientos (lista y detalle con comprobante de Open Payments) y perfil.
 import { icono } from './iconos.js';
+import * as unToque from './un-toque.js';
 import { esc, dinero, fechaCorta, grupoDeFecha, horaRestante, enmascarar, celularBonito, abrirHoja, conEspera, toast, copiar } from './ui.js';
 
 let ultimoResumen = null;
@@ -65,6 +66,11 @@ export async function inicio({ raiz, api, usuario, vigente }) {
             <a class="accion" href="#/enviar"><span class="circulo">${icono('enviar')}</span>Enviar</a>
             <a class="accion" href="#/retirar"><span class="circulo">${icono('retirar')}</span>Retirar</a>
         </nav>
+        <a class="tarjeta entrada-repartos" href="#/repartos">
+            <span class="ico">${icono('repartir')}</span>
+            <span class="cuerpo"><strong>Repartos automáticos</strong><span class="suave">Divide automáticamente cada pago que recibes</span></span>
+            ${icono('chevron', 'chev')}
+        </a>
         <section class="seccion" aria-labelledby="titulo-ultimos">
             <div class="seccion-titulo"><h2 id="titulo-ultimos">Últimos movimientos</h2><a href="#/movimientos">Ver todos</a></div>
             <div id="ultimos"><div class="esqueleto" style="height:200px"></div></div>
@@ -101,7 +107,7 @@ export async function inicio({ raiz, api, usuario, vigente }) {
 }
 
 export async function movimientos({ raiz, api, usuario, vigente }) {
-    raiz.innerHTML = `<div class="encabezado"><h1>Movimientos</h1></div><div id="lista"><div class="esqueleto" style="height:300px"></div></div>`;
+    raiz.innerHTML = `<div class="encabezado"><h1>Movimientos</h1><a class="derecha enlace-chico" href="#/repartos/recibido">${icono('repartir')} Por repartos</a></div><div id="lista"><div class="esqueleto" style="height:300px"></div></div>`;
     const r = await cargarResumen(api);
     if (!vigente()) return;
     const lista = r.movimientos ?? [];
@@ -181,7 +187,8 @@ export async function movimiento({ raiz, api, vigente }, id) {
     }
 }
 
-export function perfil({ raiz, api, usuario, ir, recargarUsuario, olvidarUsuario }) {
+export function perfil(ctx) {
+    const { raiz, api, usuario, ir, recargarUsuario, olvidarUsuario } = ctx;
     const inicial = (usuario.nombre ?? '?').trim().charAt(0).toUpperCase();
     const tema = localStorage.getItem('cajita_tema') ?? 'sistema';
     raiz.innerHTML = `
@@ -205,6 +212,10 @@ export function perfil({ raiz, api, usuario, ir, recargarUsuario, olvidarUsuario
                     <span class="ico">${icono('editar')}</span><span class="cuerpo"><span class="titulo">Cambiar cómo recibo</span></span>${icono('chevron', 'chev')}
                 </a></li>
             </ul>
+        </section>
+        <section class="seccion" aria-labelledby="titulo-toque">
+            <h2 id="titulo-toque" class="grupo-fecha" style="margin-top:0">Pagos con un toque</h2>
+            <div id="un-toque"><div class="esqueleto" style="height:72px"></div></div>
         </section>
         <section class="seccion" aria-labelledby="titulo-pref">
             <h2 id="titulo-pref" class="grupo-fecha" style="margin-top:0">Apariencia</h2>
@@ -271,7 +282,7 @@ export function perfil({ raiz, api, usuario, ir, recargarUsuario, olvidarUsuario
         const hoja = abrirHoja(`
             <form id="form-nombre" novalidate>
                 <h2>Tu nombre</h2>
-                <div class="campo"><label for="nuevo-nombre">Nombre o negocio</label><input class="entrada" id="nuevo-nombre" maxlength="40" value="${esc(usuario.nombre ?? '')}"><span class="mensaje-error" id="error-nombre" aria-live="polite"></span></div>
+                <div class="campo"><label for="nuevo-nombre">Tu nombre</label><input class="entrada" id="nuevo-nombre" maxlength="40" value="${esc(usuario.nombre ?? '')}"><span class="mensaje-error" id="error-nombre" aria-live="polite"></span></div>
                 <div class="pila"><button class="boton" type="submit">Guardar</button><button class="boton fantasma" type="button" data-cerrar>Cancelar</button></div>
             </form>`, { etiqueta: 'Cambiar tu nombre' });
         hoja.querySelector('#nuevo-nombre').focus();
@@ -290,6 +301,8 @@ export function perfil({ raiz, api, usuario, ir, recargarUsuario, olvidarUsuario
             });
         });
     });
+
+    unToque.seccionPerfil(ctx, raiz.querySelector('#un-toque')).catch(() => { raiz.querySelector('#un-toque').innerHTML = ''; });
 
     raiz.querySelectorAll('[data-tema]').forEach((b) => b.addEventListener('click', () => {
         localStorage.setItem('cajita_tema', b.dataset.tema);

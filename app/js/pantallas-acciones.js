@@ -2,6 +2,7 @@
 import { icono } from './iconos.js';
 import { esc, dinero, aUnidadMinima, formatearCampoMonto, horaRestante, toast, conEspera, abrirHoja, copiar, qrSvg, enmascarar } from './ui.js';
 import { chipEstado, comprobanteHtml } from './pantallas-cuenta.js';
+import * as unToque from './un-toque.js';
 
 const atras = (href = '#/inicio', etiqueta = 'Volver') => `<a class="icono-boton" href="${href}" aria-label="${esc(etiqueta)}">${icono('atras')}</a>`;
 const aDolarIlp = (url) => String(url ?? '').replace(/^https:\/\//, '$');
@@ -75,7 +76,7 @@ export async function cobrar({ raiz, api, usuario, vigente }) {
                 <div class="campo"><label for="monto" class="oculto-visual">Monto en pesos</label>
                     <div class="con-prefijo"><span class="prefijo" aria-hidden="true">$</span><input class="entrada monto-grande" id="monto" inputmode="numeric" placeholder="0" autocomplete="off"></div>
                     <span class="mensaje-error" id="error-monto" aria-live="polite"></span></div>
-                <div class="campo"><label for="concepto">¿Por qué? <span class="suave">(opcional)</span></label><input class="entrada" id="concepto" maxlength="40" placeholder="Ej.: 2 empanadas"></div>
+                <div class="campo"><label for="concepto">¿Por qué? <span class="suave">(opcional)</span></label><input class="entrada" id="concepto" maxlength="40" placeholder="Ej.: Almuerzo"></div>
                 <div class="pila"><button class="boton" type="submit">Crear QR</button><button class="boton fantasma" type="button" data-cerrar>Cancelar</button></div>
             </form>`, { etiqueta: 'Cobrar un monto exacto' });
         const campo = hoja.querySelector('#monto');
@@ -189,8 +190,12 @@ function seguirPago({ ir }, respuesta, ventana) {
 async function confirmarPago(ctx, qrId) {
     const { raiz, api, usuario, vigente } = ctx;
     const qr = await api.verQr(qrId);
+    // Pagos con un toque solo con la billetera propia (el permiso queda a nombre de esa billetera).
+    const toque = usuario.wallet ? await unToque.estado(api, usuario) : null;
     if (!vigente()) return;
     const montoFijo = qr.monto;
+    const moneda = { assetCode: montoFijo?.assetCode ?? 'COP', assetScale: montoFijo?.assetScale ?? 2 };
+    const personas = qr.meseros?.length ?? 0;
     raiz.innerHTML = `
         <div class="encabezado">${atras('#/pagar')}<h1>Confirma el pago</h1></div>
         <section class="tarjeta">
@@ -205,6 +210,11 @@ async function confirmarPago(ctx, qrId) {
                 ${montoFijo ? '' : `
                 <div class="campo"><label for="monto">¿Cuánto vas a pagar?</label>
                     <div class="con-prefijo"><span class="prefijo" aria-hidden="true">$</span><input class="entrada monto-grande" id="monto" inputmode="numeric" placeholder="0" autocomplete="off"></div></div>`}
+                ${qr.propina ? `
+                <div class="campo"><label for="extra">¿Quieres agregar un extra? <span class="suave">(opcional)</span></label>
+                    <div class="con-prefijo"><span class="prefijo" aria-hidden="true">$</span><input class="entrada" id="extra" inputmode="numeric" placeholder="0" autocomplete="off"></div>
+                    <div class="sugerencias" role="group" aria-label="Extras sugeridos">${['1000', '2000', '5000'].map((v) => `<button class="chip-boton" type="button" data-extra="${v}">${esc(dinero({ value: `${v}00`, ...moneda }))}</button>`).join('')}</div>
+                    <span class="ayuda">Se comparte en partes iguales entre ${personas === 1 ? 'una persona' : `${personas || 'varias'} personas`}.</span></div>` : ''}
                 <div class="campo">
                     <label for="pagador">Pagas desde tu billetera</label>
                     <input class="entrada" id="pagador" autocomplete="off" autocapitalize="off" spellcheck="false" value="${esc(aDolarIlp(billeteraPagadora(usuario)))}" placeholder="$ilp.interledger-test.dev/tu-nombre" ${usuario.wallet ? 'readonly' : ''}>
@@ -214,19 +224,46 @@ async function confirmarPago(ctx, qrId) {
                     <div><dt>Llega a</dt><dd>${qr.destino === 'efectivo' ? 'Efectivo, a su cédula' : 'Su billetera'}</dd></div>
                     ${qr.usado ? '<div><dt>Estado</dt><dd>Ya fue pagado</dd></div>' : ''}
                 </dl>
+                <div id="toque"></div>
                 <span class="mensaje-error" id="error" aria-live="polite"></span>
                 <div class="pila-abajo"><button class="boton" type="submit" id="pagar" ${qr.usado ? 'disabled' : ''}>${montoFijo ? `Pagar ${esc(dinero(montoFijo))}` : 'Pagar'}</button></div>
             </form>
         </section>`;
+    const campoExtra = raiz.querySelector('#extra');
+    const valorExtra = () => (campoExtra ? aUnidadMinima(campoExtra.value, moneda.assetScale) : null);
+    const pintarToque = (e) => {
+        const zona = raiz.querySelector('#toque');
+        if (!zona || !e) return;
+        zona.innerHTML = e.activo
+            ? `<div class="aviso info" style="margin-top:0">${icono('rayo')}<p><strong>Pagas con un toque</strong>Sin autorizar en tu billetera. Te quedan ${esc(dinero(e.disponible))} esta semana.</p></div>`
+            : `<button class="fila oferta" type="button" id="activar-toque">
+                    <span class="ico">${icono('rayo')}</span>
+                    <span class="cuerpo"><span class="titulo">Activar pagos con un toque</span><span class="sub">Hasta ${esc(unToque.textoTope(usuario.wallet))} por semana, sin autorizar cada pago</span></span>
+                    ${icono('chevron', 'chev')}
+               </button>`;
+        zona.querySelector('#activar-toque')?.addEventListener('click', () => unToque.activar(ctx, { pagador: usuario.wallet, alTerminar: pintarToque }));
+    };
+    pintarToque(toque);
     const campoMonto = raiz.querySelector('#monto');
     const boton = raiz.querySelector('#pagar');
+    // El botón dice el total: monto (fijo o escrito) más el extra.
+    const pintarBoton = () => {
+        const base = montoFijo ? BigInt(montoFijo.value) : BigInt(aUnidadMinima(campoMonto?.value, 2) ?? 0);
+        const total = base + BigInt(valorExtra() ?? 0);
+        boton.textContent = total > 0n ? `Pagar ${dinero({ value: String(total), ...moneda })}` : 'Pagar';
+    };
     if (campoMonto) {
         formatearCampoMonto(campoMonto);
-        campoMonto.addEventListener('input', () => {
-            const v = aUnidadMinima(campoMonto.value, 2);
-            boton.textContent = v ? `Pagar ${dinero({ value: v, assetCode: 'COP', assetScale: 2 })}` : 'Pagar';
-        });
+        campoMonto.addEventListener('input', pintarBoton);
         campoMonto.focus();
+    }
+    if (campoExtra) {
+        formatearCampoMonto(campoExtra);
+        campoExtra.addEventListener('input', pintarBoton);
+        raiz.querySelectorAll('[data-extra]').forEach((b) => b.addEventListener('click', () => {
+            campoExtra.value = Number(b.dataset.extra).toLocaleString('es-CO');
+            pintarBoton();
+        }));
     }
     raiz.querySelector('#form').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -235,11 +272,13 @@ async function confirmarPago(ctx, qrId) {
         const monto = montoFijo ? undefined : aUnidadMinima(campoMonto.value, 2);
         if (!montoFijo && !monto) { error.textContent = 'Escribe cuánto vas a pagar.'; campoMonto.focus(); return; }
         if (!pagador) { error.textContent = 'Escribe la dirección de tu billetera.'; return; }
-        const ventana = abrirVentanaConsentimiento();
+        const propina = valorExtra() ?? undefined;
+        // Con pagos con un toque vigentes el backend paga sin consentimiento: no hace falta ventana de la billetera.
+        const ventana = toque?.activo ? null : abrirVentanaConsentimiento();
         await conEspera(boton, async () => {
             try {
                 if (!usuario.wallet) localStorage.setItem('cajita_pagador', pagador);
-                const r = await api.pagarQr(qrId, { pagador, monto });
+                const r = await api.pagarQr(qrId, { pagador, monto, propina, clienteId: usuario.id });
                 seguirPago(ctx, r, ventana);
             } catch (err) {
                 ventana?.close();

@@ -71,6 +71,15 @@ export function horaRestante(iso) {
     return horas < 48 ? `${horas} h` : `${Math.floor(horas / 24)} días`;
 }
 
+// Moneda de una billetera guardada al registrarla ({ wallet, assetCode, assetScale } en localStorage), o null.
+export function monedaGuardada(wallet) {
+    try {
+        const guardada = JSON.parse(localStorage.getItem('cajita_billetera') ?? 'null');
+        if (guardada?.assetCode && (!wallet || guardada.wallet === wallet)) return { assetCode: guardada.assetCode, assetScale: Number(guardada.assetScale ?? 2) };
+    } catch { /* sin dato */ }
+    return null;
+}
+
 // ---------- Toasts ----------
 export function toast(mensaje, { tipo = 'ok', ms = 3800 } = {}) {
     const zona = document.getElementById('toasts');
