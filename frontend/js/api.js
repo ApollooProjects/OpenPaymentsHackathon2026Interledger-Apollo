@@ -155,7 +155,7 @@ const mock = {
         const qrId = `mock-qr-${Date.now()}`;
         estado.repartos[id] = {
             id, qrId, vendedor: cuerpo.vendedor, conCuenta: cuerpo.conCuenta, cedula: cuerpo.cedula, celular: cuerpo.celular,
-            porcentaje: cuerpo.porcentaje, deuda: cuerpo.deuda.value, pagado: '0', saldo: '0', ventas: 0,
+            porcentaje: cuerpo.porcentaje, deuda: cuerpo.deuda ?? '0', pagado: '0', saldo: '0', ventas: 0,
         };
         estado.qrs[qrId] = {
             qrId, repartoId: id, vendedor: cuerpo.vendedor, tipo: 'estatico', monto: null, meseros: [], vigenteHasta: null, propina: false,
@@ -170,7 +170,7 @@ const mock = {
             error.status = 404;
             throw error;
         }
-        return { saldo: pesos(r.saldo), ventas: r.ventas, proveedor: { pagado: pesos(r.pagado), deuda: pesos(r.deuda) } };
+        return { saldo: pesos(r.saldo), ventas: r.ventas, proveedor: { pagado: pesos(r.pagado), deuda: r.deuda === '0' ? null : pesos(r.deuda) } };
     },
     crearQr(cuerpo) {
         const estado = estadoMock();
@@ -230,13 +230,13 @@ export function obtenerPago(pagoId) {
     return pedir('GET', `/pagos/${encodeURIComponent(pagoId)}`);
 }
 
-// Capa 3 (C3.3): { vendedor, conCuenta, walletVendedor?, cedula?, celular?, proveedorWallet, porcentaje, deuda: Monto, meseros? }
+// Capa 3 (C3.3): { vendedor, conCuenta, vendedorWallet?, cedula?, celular?, proveedorWallet, porcentaje, deuda: "centavos", meseros? }
 export function crearReparto(cuerpo) {
     if (usaMock()) return conMock(() => mock.crearReparto(cuerpo));
     return pedir('POST', '/repartos', cuerpo);
 }
 
-// → { saldo: Monto, ventas, proveedor: { pagado: Monto, deuda: Monto } }
+// → { saldo: Monto, ventas, proveedor: { pagado: Monto, deuda: Monto | null } }
 export function obtenerReparto(id) {
     if (usaMock()) return conMock(() => mock.reparto(id));
     return pedir('GET', `/repartos/${encodeURIComponent(id)}`);
@@ -248,10 +248,10 @@ export function crearQr(cuerpo) {
     return pedir('POST', '/qr', cuerpo);
 }
 
-// Retiro desde la app (H7): mismo retiro que RETIRAR por SMS; el PIN llega a la bandeja del celular.
-export function solicitarRetiro({ cedula, celular }) {
+// Retiro desde la app (H7): cambia la cajita y pide el mismo retiro que RETIRAR por SMS; el PIN llega a la bandeja.
+export function retirarReparto(id) {
     if (usaMock()) return conMock(() => mock.retirar());
-    return pedir('POST', '/retiros', { cedula, celular });
+    return pedir('POST', `/repartos/${encodeURIComponent(id)}/retirar`);
 }
 
 // Capa 3 (C3.6, propuesto): → { activo, tope?: Monto, restante?: Monto }. Sin la ruta todavía, se asume inactivo.

@@ -3,7 +3,7 @@
 // Sin reparto configurado muestra el QR estático de la capa 1 (/#vendedor?qr=<id>, por defecto "demo").
 import {
     alAbrirPestana, aMonto, crearQr, crearReparto, formatearMonto, obtenerQr, obtenerReparto, parametrosHash,
-    solicitarRetiro, urlImagenQr, MONEDA_DEMO
+    retirarReparto, urlImagenQr, MONEDA_DEMO
 } from './api.js';
 
 const seccion = document.getElementById('vendedor');
@@ -44,11 +44,12 @@ async function actualizarPanel() {
     try {
         const estado = await obtenerReparto(reparto.id);
         const pagado = BigInt(estado.proveedor.pagado.value);
-        const deuda = BigInt(estado.proveedor.deuda.value);
+        // Sin deuda (null) la barra muestra solo lo que ya recibió el proveedor.
+        const deuda = estado.proveedor.deuda ? BigInt(estado.proveedor.deuda.value) : 0n;
         $('[data-saldo]').textContent = formatearMonto(estado.saldo);
         $('[data-ventas]').textContent = estado.ventas;
         $('[data-pagado]').textContent = formatearMonto(estado.proveedor.pagado);
-        $('[data-deuda]').textContent = formatearMonto(estado.proveedor.deuda);
+        $('[data-deuda]').textContent = estado.proveedor.deuda ? formatearMonto(estado.proveedor.deuda) : 'sin deuda';
         $('[data-barra]').max = Number(deuda) || 1;
         $('[data-barra]').value = Number(pagado);
         $('[data-saldada]').hidden = !(deuda > 0n && pagado >= deuda);
@@ -117,19 +118,20 @@ formConfigurar.addEventListener('submit', async (evento) => {
     evento.preventDefault();
     const campos = formConfigurar.elements;
     const conCuenta = campos.conCuenta.value === 'si';
-    const deuda = aMonto(campos.deuda.value, MONEDA_DEMO);
+    const textoDeuda = campos.deuda.value.trim();
+    const deuda = textoDeuda ? aMonto(textoDeuda, MONEDA_DEMO) : null;
     const cuerpo = {
         vendedor: campos.vendedor.value.trim(),
         conCuenta,
         proveedorWallet: campos.proveedorWallet.value.trim(),
         porcentaje: Number(campos.porcentaje.value),
-        deuda,
+        deuda: deuda?.value,   // el backend la recibe en centavos
     };
-    if (conCuenta) cuerpo.walletVendedor = campos.walletVendedor.value.trim();
+    if (conCuenta) cuerpo.vendedorWallet = campos.walletVendedor.value.trim().replace(/^\$/, 'https://');
     else Object.assign(cuerpo, { cedula: campos.cedula.value.replace(/\D/g, ''), celular: campos.celular.value.replace(/\D/g, '') });
 
-    if (!deuda) return mostrarAviso(aviso, 'Escribe la deuda con tu proveedor (puede ser $ 1).');
-    if (conCuenta && !cuerpo.walletVendedor.startsWith('https://')) return mostrarAviso(aviso, 'Tu wallet address empieza por https://');
+    if (textoDeuda && !deuda) return mostrarAviso(aviso, 'La deuda no es válida (déjala vacía si no le debes nada).');
+    if (conCuenta && !cuerpo.vendedorWallet.startsWith('https://')) return mostrarAviso(aviso, 'Tu wallet address empieza por https:// o $');
     if (!conCuenta && (!cuerpo.cedula || !cuerpo.celular)) return mostrarAviso(aviso, 'Sin cuenta necesitamos tu cédula y tu celular para el retiro.');
 
     const boton = formConfigurar.querySelector('button');
@@ -155,7 +157,8 @@ $('[data-retirar]').addEventListener('click', async () => {
     boton.setAttribute('aria-busy', 'true');
     boton.disabled = true;
     try {
-        await solicitarRetiro({ cedula: reparto.cedula, celular: reparto.celular });
+        const resultado = await retirarReparto(reparto.id);
+        if (resultado.ok === false) throw new Error(resultado.error);
         avisoRetiro.replaceChildren(
             'Listo: te llegó un SMS con el PIN. ',
             Object.assign(document.createElement('a'), { href: `#celular?numero=${reparto.celular}`, textContent: 'Ver el SMS' })
