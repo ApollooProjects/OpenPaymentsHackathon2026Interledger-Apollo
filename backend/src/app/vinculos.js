@@ -31,6 +31,13 @@ export function vincular({ cedula, celular, forzar = false }) {
     return { celular: numero, cedula: doc };
 }
 
+// Deja el celular libre: el próximo registro o remesa con ese celular lo vincula a su cédula.
+export function desvincular(celular) {
+    const numero = normalizarCelular(celular);
+    if (!numero) throw new Error('Celular inválido');
+    return db.prepare('DELETE FROM vinculos_celular WHERE celular = ?').run(numero).changes > 0;
+}
+
 export function cedulaDeCelular(celular) {
     const numero = normalizarCelular(celular);
     if (!numero) return null;
