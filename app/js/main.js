@@ -18,7 +18,7 @@ const RUTAS = [
     { patron: /^bienvenida(?:\/(\w+))?$/, pantalla: acceso.bienvenida, onboarding: true },
     { patron: /^inicio$/, pantalla: cuenta.inicio, menu: 'inicio' },
     { patron: /^movimientos$/, pantalla: cuenta.movimientos, menu: 'movimientos' },
-    { patron: /^movimiento\/([\w-]+)$/, pantalla: cuenta.movimiento, menu: 'movimientos' },
+    { patron: /^movimiento\/(.+)$/, pantalla: cuenta.movimiento, menu: 'movimientos' },
     { patron: /^perfil$/, pantalla: cuenta.perfil, menu: 'perfil' },
     { patron: /^cobrar$/, pantalla: acciones.cobrar, menu: 'cobrar' },
     { patron: /^pagar(?:\/([\w-]+))?$/, pantalla: acciones.pagar, menu: 'pagar' },
@@ -95,7 +95,7 @@ async function mostrar() {
         olvidarUsuario: () => { estado.usuario = null; }
     };
     try {
-        await r.pantalla(ctx, ...m.slice(1));
+        await r.pantalla(ctx, ...m.slice(1).map((x) => (x === undefined ? x : decodeURIComponent(x))));
     } catch (error) {
         console.error(error);
         if (error.status === 401) { estado.usuario = null; return ir(''); }

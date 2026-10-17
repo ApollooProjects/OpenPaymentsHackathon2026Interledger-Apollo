@@ -49,7 +49,9 @@ function saludo() {
 }
 
 export async function inicio({ raiz, api, usuario, vigente }) {
-    const nombre = (usuario.nombre ?? '').split(' ')[0];
+    // «Doña Rosa» se saluda completo; «Ana Gómez», solo por el nombre.
+    const partes = (usuario.nombre ?? '').trim().split(/\s+/);
+    const nombre = /^(don|doña|sr\.?|sra\.?|el|la)$/i.test(partes[0] ?? '') ? partes.slice(0, 2).join(' ') : partes[0];
     raiz.innerHTML = `
         <div class="encabezado">
             <div><p class="suave" style="margin:0">${saludo()},</p><h1 style="font-size:1.6rem">${esc(nombre || 'hola')}</h1></div>
@@ -141,7 +143,8 @@ export async function movimiento({ raiz, api, vigente }, id) {
         return;
     }
     const t = TIPOS[m.tipo] ?? TIPOS.recibido;
-    const pagoId = m.pagoId ?? (!esUrl(m.comprobante) ? m.comprobante : null);
+    // Los movimientos de billetera tienen el id del pago (GET /pagos/:id); los de efectivo, el del cobro de Open Payments.
+    const pagoId = m.pagoId ?? (!esUrl(m.id) ? m.id : null);
     raiz.innerHTML = `
         <div class="encabezado"><a class="icono-boton" href="#/movimientos" aria-label="Volver a movimientos">${icono('atras')}</a></div>
         <section class="tarjeta">
@@ -154,11 +157,11 @@ export async function movimiento({ raiz, api, vigente }, id) {
             <dl class="datos">
                 <div><dt>${m.tipo === 'recibido' ? 'De' : m.tipo === 'retiro' ? 'Dónde' : 'Para'}</dt><dd>${esc(m.tipo === 'retiro' ? (m.contraparte || 'Corresponsal') : (m.contraparte || '—'))}</dd></div>
                 <div><dt>Fecha</dt><dd>${esc(new Date(m.fecha).toLocaleString('es-CO', { dateStyle: 'long', timeStyle: 'short' }))}</dd></div>
-                <div><dt>Referencia</dt><dd class="tecnico" style="font-weight:600">${esc(String(m.id).slice(0, 8).toUpperCase())}</dd></div>
+                <div><dt>Referencia</dt><dd class="tecnico" style="font-weight:600">${esc(String(m.id).split('/').pop().slice(0, 8).toUpperCase())}</dd></div>
             </dl>
             <details class="comprobante" id="comprobante">
                 <summary>${icono('escudo', 'chev')}&nbsp; Comprobante de Open Payments</summary>
-                <div id="detalle-op">${m.comprobante && esUrl(m.comprobante) ? `<p class="tecnico">${esc(m.comprobante)}</p>` : '<p class="suave chico">Cargando…</p>'}</div>
+                <div id="detalle-op">${pagoId ? '<p class="suave chico">Cargando…</p>' : `<p class="tecnico">${esc(m.comprobante ?? m.id)}</p>`}</div>
             </details>
         </section>
         <div class="pila-abajo">
@@ -172,7 +175,7 @@ export async function movimiento({ raiz, api, vigente }, id) {
             try {
                 raiz.querySelector('#detalle-op').innerHTML = comprobanteHtml(await api.verPago(pagoId));
             } catch (err) {
-                raiz.querySelector('#detalle-op').innerHTML = `<p class="tecnico">${esc(m.comprobante ?? '')}</p>`;
+                raiz.querySelector('#detalle-op').innerHTML = `<p class="tecnico">${esc(m.comprobante ?? m.id)}</p>`;
             }
         });
     }
