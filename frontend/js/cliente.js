@@ -1,7 +1,7 @@
 // Pestaña Cliente (H3, H5, H5b, H5c): escanea el QR → escribe el monto → (propina) → Pagar → consentimiento en su wallet.
 // Con pagos rápidos activos la compra sale sin volver a aprobar.
-import {
 import { aWalletUrl, esWalletUrl } from './wallet.js';
+import {
     activarPagosRapidos, alAbrirPestana, aMonto, cancelarPermiso, formatearMonto, iniciarPago, idCliente, obtenerPermiso,
     obtenerQr, MONEDA_DEMO
 } from './api.js';
