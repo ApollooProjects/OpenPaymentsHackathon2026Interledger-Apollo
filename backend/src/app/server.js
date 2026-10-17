@@ -24,7 +24,11 @@ const app = express();
 
 // El cuerpo crudo se guarda para verificar la firma HMAC de los webhooks del gateway de SMS.
 app.use(express.json({ verify: (req, res, buf) => { req.cuerpoCrudo = buf; } }));
-app.use(express.static(path.join(raiz, 'frontend')));
+// no-cache: el navegador (y Cloudflare) revalidan con el ETag en cada carga, así nadie se queda con JS viejo
+// después de un despliegue; si el archivo no cambió, la respuesta es un 304 sin cuerpo.
+app.use(express.static(path.join(raiz, 'frontend'), {
+    setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache')
+}));
 app.use(rutasQr);
 
 app.get('/salud', (req, res) => {

@@ -108,7 +108,7 @@ botonEnviar.addEventListener('click', async () => {
         const { redirectUrl } = await enviarRemesa({ cotizacionId: cotizacionActual.cotizacionId });
         location.href = redirectUrl;   // pantalla de consentimiento de la wallet del remitente
     } catch (error) {
-        if (error.status === 410) volverAlFormulario();
+        if (error.status === 404 || error.status === 409 || error.status === 410) volverAlFormulario();   // cotización inexistente, usada o vencida
         mostrarAviso(`No se pudo enviar: ${error.message}`);
     } finally {
         botonEnviar.removeAttribute('aria-busy');

@@ -46,7 +46,7 @@
         <section id="cliente" hidden>
             <h2>Cliente</h2>
             <p data-vendedor>Escanea el QR del vendedor para pagar.</p>
-            <form hidden>
+            <form onsubmit="event.preventDefault()" hidden>
                 <label>
                     Monto
                     <input name="monto" inputmode="decimal" placeholder="$ 3.000" autocomplete="off" required>
@@ -85,7 +85,7 @@
         <section id="vendedor" hidden>
             <h2>Vendedor</h2>
 
-            <form data-configurar hidden>
+            <form onsubmit="event.preventDefault()" data-configurar hidden>
                 <p>Configura tu reparto: una parte de cada venta le llega directo a tu proveedor hasta saldar lo que te fió.</p>
                 <label>Tu nombre <input name="vendedor" placeholder="Doña Rita" required></label>
                 <fieldset>
@@ -125,7 +125,7 @@
 
             <details data-personalizado hidden>
                 <summary>Generar QR personalizado (monto, meseros, vigencia)</summary>
-                <form>
+                <form onsubmit="event.preventDefault()">
                     <div class="grid">
                         <label>Monto (opcional) <input name="monto" inputmode="decimal" placeholder="$ 9.000"></label>
                         <label>Descripción (opcional) <input name="descripcion" placeholder="3 empanadas"></label>
@@ -158,7 +158,7 @@
         <section id="remitente" hidden>
             <h2>Enviar dinero</h2>
             <p>Manda una remesa a tu familia solo con su celular y su cédula. Sin cuenta, la retira en efectivo en cualquier corresponsal.</p>
-            <form data-cotizar>
+            <form onsubmit="event.preventDefault()" data-cotizar>
                 <label>Tu nombre (lo verá en el SMS) <input name="nombre" placeholder="Carlos" autocomplete="off"></label>
                 <label>Tu wallet address <input name="remitente" type="text" inputmode="url" spellcheck="false" autocapitalize="off" placeholder="https://ilp.interledger-test.dev/tu-wallet" autocomplete="off" required></label>
                 <fieldset>
@@ -186,13 +186,13 @@
         </section>
         <section id="celular" hidden>
             <h2>Celular</h2>
-            <form data-numero role="group">
+            <form onsubmit="event.preventDefault()" data-numero role="group">
                 <input name="numero" inputmode="tel" placeholder="Número de celular, p. ej. 3001234567" autocomplete="off" aria-label="Número de celular">
                 <button type="submit">Abrir</button>
             </form>
             <div class="telefono">
                 <div data-pantalla class="pantalla" hidden></div>
-                <form data-mensaje hidden>
+                <form onsubmit="event.preventDefault()" data-mensaje hidden>
                     <div class="atajos">
                         <button type="button" class="outline" data-atajo="1">1 SALDO</button>
                         <button type="button" class="outline" data-atajo="2">2 RETIRAR</button>
@@ -209,7 +209,7 @@
         <section id="cajero" hidden>
             <h2>Cajero</h2>
             <p>Corresponsal: pide la cédula y el PIN que le llegó por SMS a quien retira. Se entrega siempre el saldo total.</p>
-            <form>
+            <form onsubmit="event.preventDefault()">
                 <label>
                     Cédula
                     <input name="cedula" inputmode="numeric" placeholder="1020304050" autocomplete="off" required>
