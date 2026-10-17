@@ -271,7 +271,8 @@ export function recibidoPorRepartos(usuario) {
         for (const destino of pago.plan.destinos.filter((d) => d.walletUrl === wallet)) {
             const regla = reglaDelRol(rolDelDestino(destino, reparto));
             if (!regla) continue;
-            const monto = destino.recibido ?? destino.monto;
+            // El cobro de la deuda es compartido entre ventas: su `recibido` es el acumulado, no lo de este pago.
+            const monto = destino.compartido ? destino.monto : (destino.recibido ?? destino.monto);
             movimientos.push({
                 id: `${pago.id}:${regla}`,
                 fecha: pago.creado,
