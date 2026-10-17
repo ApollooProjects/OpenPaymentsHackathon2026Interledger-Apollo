@@ -47,7 +47,9 @@
 
     function aplicarPerfil() {
         enlaces.forEach((enlace) => {
-            enlace.closest('li').hidden = !perfil || !perfil.pestanas.includes(enlace.dataset.pestana);
+            // Celular y Cajero son herramientas de la demo: siempre a mano en la barra, con o sin perfil.
+            enlace.closest('li').hidden = !HERRAMIENTAS.includes(enlace.dataset.pestana)
+                && (!perfil || !perfil.pestanas.includes(enlace.dataset.pestana));
         });
         const cobros = document.querySelector('header [data-pestana="cobros"]');
         if (cobros) cobros.textContent = perfil?.id.startsWith('mesero') ? 'Mis propinas' : 'Mis cobros';
