@@ -3,6 +3,7 @@
 import { randomBytes } from 'node:crypto';
 import * as op from '../op/index.js';
 import * as store from './store.js';
+import { aWalletUrl, esWalletUrl } from './wallet.js';
 
 const SEMANA_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -12,8 +13,8 @@ function urlPublica() {
 
 export async function activar({ clienteId, pagador, tope }) {
     if (!String(clienteId ?? '').trim()) throw new Error('Falta el clienteId');
-    const walletUrl = String(pagador ?? '').trim().replace(/^\$/, 'https://');
-    if (!walletUrl.startsWith('https://')) throw new Error('Falta la billetera de quien paga');
+    const walletUrl = aWalletUrl(pagador);
+    if (!esWalletUrl(walletUrl)) throw new Error('Falta la billetera de quien paga');
     const valor = typeof tope === 'object' && tope !== null ? tope.value : tope;
     if (!/^\d+$/.test(String(valor ?? '')) || BigInt(valor) <= 0n) throw new Error('El tope debe ser un entero positivo en centavos');
 

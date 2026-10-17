@@ -7,11 +7,12 @@ import * as retiros from './retiros.js';
 import * as sms from './sms.js';
 import * as vinculos from './vinculos.js';
 import { calcularReparto, normalizarMeseros } from './reparto.js';
+import { aWalletUrl, esWalletUrl } from './wallet.js';
 
 const VIGENCIA_CAJITA_MS = 7 * 24 * 60 * 60 * 1000;
 
 const soloDigitos = (texto) => String(texto ?? '').replace(/\D/g, '');
-const aUrl = (wallet) => String(wallet ?? '').trim().replace(/^\$/, 'https://');
+const aUrl = aWalletUrl;
 
 function custodia() {
     if (!process.env.CUSTODIA_WALLET) throw new Error('Falta CUSTODIA_WALLET en el .env');
@@ -33,11 +34,11 @@ export async function crearReparto({
     ahorroWallet = null, ahorroPorcentaje = 0
 }) {
     if (!String(vendedor ?? '').trim()) throw new Error('Falta el nombre del vendedor');
-    if (!aUrl(proveedorWallet).startsWith('https://')) throw new Error('Falta la billetera del proveedor');
+    if (!esWalletUrl(aUrl(proveedorWallet))) throw new Error('Falta la billetera del proveedor');
     const pct = Number(porcentaje);
     if (!Number.isInteger(pct) || pct < 0 || pct > 100) throw new Error('porcentaje debe ser un entero entre 0 y 100');
     if (deuda !== null && deuda !== undefined && !/^\d+$/.test(String(deuda))) throw new Error('deuda debe ser un entero en centavos');
-    if (conCuenta && !aUrl(vendedorWallet).startsWith('https://')) throw new Error('Escribe la dirección de tu billetera');
+    if (conCuenta && !esWalletUrl(aUrl(vendedorWallet))) throw new Error('Escribe la dirección de tu billetera');
     if (!conCuenta && (!soloDigitos(cedula) || !soloDigitos(celular))) throw new Error('Sin cuenta hacen falta la cédula y el celular');
     // Sin cuenta, el celular queda vinculado a la cédula (falla si ya es de otra) y normalizado como lo manda el SMS.
     if (!conCuenta) celular = vinculos.vincular({ cedula, celular }).celular;
@@ -47,7 +48,7 @@ export async function crearReparto({
     if (!Number.isInteger(pctAhorro) || pctAhorro < 0 || pctAhorro > 100) throw new Error('ahorroPorcentaje debe ser un entero entre 0 y 100');
     const walletAhorro = pctAhorro > 0 ? aUrl(ahorroWallet) : null;
     if (pctAhorro > 0) {
-        if (!walletAhorro.startsWith('https://')) throw new Error('Para ahorrar escribe también la billetera de ahorro');
+        if (!esWalletUrl(walletAhorro)) throw new Error('Para ahorrar escribe también la billetera de ahorro');
         // En la Custodia el ahorro se sumaría al saldo que se retira con PIN: tiene que ir a otra wallet.
         if (process.env.CUSTODIA_WALLET && walletAhorro === custodia()) throw new Error('La billetera de ahorro no puede ser la Custodia');
         await op.obtenerWallet(walletAhorro);

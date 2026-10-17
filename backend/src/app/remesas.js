@@ -4,6 +4,7 @@ import { db } from './db.js';
 import * as motor from './motor.js';
 import * as sms from './sms.js';
 import * as vinculos from './vinculos.js';
+import { aWalletUrl, esWalletUrl } from './wallet.js';
 
 const VIGENCIA_COBRO_MS = 24 * 60 * 60 * 1000;
 
@@ -20,7 +21,7 @@ db.exec(`
 `);
 
 const soloDigitos = (texto) => String(texto ?? '').replace(/\D/g, '');
-const aUrl = (wallet) => String(wallet ?? '').trim().replace(/^\$/, 'https://');
+const aUrl = aWalletUrl;
 
 function custodia() {
     if (!process.env.CUSTODIA_WALLET) throw new Error('Falta CUSTODIA_WALLET en el .env');
@@ -56,7 +57,7 @@ async function destinoDeRemesa({ celular, cedula, destinatarioWallet, nombreRemi
 // modo 'recibe': monto es lo que debe llegar exactamente, en la moneda de quien recibe (la comisión la paga quien envía).
 export async function cotizar({ remitente, nombreRemitente, celular, cedula, destinatarioWallet, monto, modo = 'envio' } = {}) {
     const walletRemitente = aUrl(remitente);
-    if (!walletRemitente.startsWith('https://')) throw errorHttp(400, 'Falta la dirección de tu billetera');
+    if (!esWalletUrl(walletRemitente)) throw errorHttp(400, 'Falta la dirección de tu billetera');
     const valor = typeof monto === 'object' && monto !== null ? monto.value : monto;
     if (!/^\d+$/.test(String(valor ?? '')) || BigInt(valor) <= 0n) {
         throw errorHttp(400, 'El monto debe ser un entero positivo en la unidad mínima (centavos)');

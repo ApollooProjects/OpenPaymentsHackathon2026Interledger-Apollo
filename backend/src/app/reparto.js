@@ -1,5 +1,6 @@
 // Cuánto le toca a cada destino de una venta (P1). Función pura: montos enteros en la unidad mínima (centavos).
 // Los destinos que quedan en 0 se omiten, porque Open Payments no acepta pagos de 0.
+import { aWalletUrl, esWalletUrl } from './wallet.js';
 
 function entero(valor, nombre) {
     const texto = String(valor ?? 0);
@@ -18,8 +19,8 @@ function leerMeseros(meseros, { exigirWallet }) {
     const lista = meseros.map((m) => {
         let wallet = String(typeof m === 'string' ? m : m?.wallet ?? '').trim();
         if (exigirWallet) {
-            wallet = wallet.replace(/^\$/, 'https://');
-            if (!wallet.startsWith('https://')) throw new Error('Cada mesero debe tener una billetera que empiece por https:// o por $');
+            wallet = aWalletUrl(wallet);
+            if (!esWalletUrl(wallet)) throw new Error('Cada mesero debe tener una billetera que empiece por https:// o por $');
         }
         const porcentaje = typeof m === 'object' && m?.porcentaje !== undefined && m?.porcentaje !== null && m?.porcentaje !== ''
             ? porcentajeValido(m.porcentaje, 'El porcentaje de cada mesero')

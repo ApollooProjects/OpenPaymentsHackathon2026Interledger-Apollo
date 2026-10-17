@@ -21,9 +21,11 @@ export async function obtenerCliente() {
     return cliente;
 }
 
+// Red de seguridad: la wallet también puede llegar como la muestra la Test Wallet ($ilp…) o sin https://.
 export async function obtenerWallet(walletUrl) {
     const op = await obtenerCliente();
-    return op.walletAddress.get({ url: walletUrl });
+    const url = String(walletUrl ?? '').trim().replace(/^\$/, '').replace(/^https?:\/\//i, '');
+    return op.walletAddress.get({ url: `https://${url}` });
 }
 
 export function montoDeWallet(wallet, monto) {

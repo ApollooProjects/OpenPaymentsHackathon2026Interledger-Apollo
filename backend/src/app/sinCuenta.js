@@ -13,6 +13,7 @@ import * as store from './store.js';
 import * as sms from './sms.js';
 import * as retiros from './retiros.js';
 import * as vinculos from './vinculos.js';
+import { aWalletUrl } from './wallet.js';
 
 db.exec(`
     CREATE TABLE IF NOT EXISTS personas_sin_cuenta (
@@ -35,7 +36,7 @@ const soloDigitos = (texto) => String(texto ?? '').replace(/\D/g, '');
 function custodia() {
     const wallet = process.env.CUSTODIA_WALLET;
     if (!wallet) throw new Error('Falta CUSTODIA_WALLET en el .env');
-    return wallet.replace(/^\$/, 'https://');
+    return aWalletUrl(wallet);
 }
 
 // tipo, monto y descripcion son para el QR de transferencia a efectivo; sin ellos queda el QR estático de P2.
