@@ -5,12 +5,12 @@ import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { setTimeout as esperar } from 'node:timers/promises';
 import * as op from '../backend/src/op/index.js';
-import { guardarPermiso, obtenerPermiso, actualizarTokenPermiso } from '../backend/src/app/store.js';
+import { guardarPermiso, obtenerPermiso } from '../backend/src/app/store.js';
 
 const raiz = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 process.loadEnvFile(path.join(raiz, '.env'));
 
-const CLAVE = 'custodia-retiros';
+const CLAVE = 'custodia';
 const custodia = process.env.CUSTODIA_WALLET ?? 'https://ilp.interledger-test.dev/custodia-apollo';
 const corresponsal = process.env.CORRESPONSAL_WALLET ?? 'https://ilp.interledger-test.dev/corresponsal-apollo';
 const topePesos = BigInt(process.argv.find((a) => /^\d+$/.test(a)) ?? '500000');
@@ -85,7 +85,7 @@ async function pedirYGuardar() {
         continueToken: permiso.continueToken,
         interactRef: vuelta.interactRef
     });
-    guardarPermiso({ clave: CLAVE, walletUrl: custodia, token, manageUrl, tope: { ...tope, assetCode: wallet.assetCode, assetScale: wallet.assetScale }, interval });
+    guardarPermiso(CLAVE, { token, manageUrl });
     console.log(`4. Token guardado en data/cajita.sqlite (clave "${CLAVE}")`);
 }
 
@@ -94,7 +94,7 @@ async function probarRetiro() {
     if (!guardado) throw new Error('No hay permiso guardado de la Custodia');
 
     const rotado = await op.rotar({ token: guardado.token, manageUrl: guardado.manageUrl });
-    actualizarTokenPermiso(CLAVE, rotado);
+    guardarPermiso(CLAVE, rotado);
     console.log('5. Token rotado:', rotado.token !== guardado.token ? 'sí (nuevo)' : 'no');
 
     const monto = { value: '1000' };

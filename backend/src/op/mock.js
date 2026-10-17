@@ -28,12 +28,6 @@ export async function crearCobro({ walletUrl, monto, metadata = {}, expiresAt } 
     return { id, walletUrl };
 }
 
-export async function consultarCobro(id) {
-    const cobro = cobros.get(id);
-    if (!cobro) throw new Error(`[mock] cobro no encontrado: ${id}`);
-    return { id, recibido: { value: cobro.recibido.toString(), ...MONEDA }, completo: cobro.completo };
-}
-
 export async function listarCobros({ walletUrl, cedula } = {}) {
     return [...cobros.entries()]
         .filter(([, cobro]) => cobro.walletUrl === walletUrl)
@@ -44,6 +38,16 @@ export async function listarCobros({ walletUrl, cedula } = {}) {
             completo: cobro.completo,
             metadata: cobro.metadata
         }));
+}
+
+export async function rotar({ token, manageUrl }) {
+    return { token: `mock-token-${randomUUID()}`, manageUrl: manageUrl ?? `${BASE}/token/${randomUUID()}` };
+}
+
+export async function consultarCobro(id) {
+    const cobro = cobros.get(id);
+    if (!cobro) throw new Error(`[mock] cobro no encontrado: ${id}`);
+    return { id, recibido: { value: cobro.recibido.toString(), ...MONEDA }, completo: cobro.completo };
 }
 
 // Monto mágico para probar el camino de error: un pago de 13 (= $0,13) falla como si no hubiera saldo.
@@ -94,9 +98,4 @@ export async function continuarPermiso({ continueUri, continueToken, interactRef
 
 export function verificarHash() {
     return true;
-}
-
-export async function rotar({ token, manageUrl }) {
-    if (!token || !manageUrl) throw new Error('[mock] faltan token o manageUrl para rotar');
-    return { token: `mock-token-${randomUUID()}`, manageUrl: `${BASE}/token/${randomUUID()}` };
 }
