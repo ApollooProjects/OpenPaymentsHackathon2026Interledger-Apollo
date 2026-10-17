@@ -66,6 +66,7 @@ export async function crearCobro({ walletUrl, monto, metadata = {}, expiresAt } 
         recibido: 0n,
         metadata,
         expiresAt: expiresAt ?? null,
+        creado: new Date().toISOString(),
         completo: false
     });
     return { id, walletUrl };
@@ -79,6 +80,7 @@ export async function listarCobros({ walletUrl, cedula } = {}) {
             id,
             recibido: { value: cobro.recibido.toString(), ...MONEDA },
             completo: cobro.completo,
+            creado: cobro.creado,
             metadata: cobro.metadata
         }));
 }

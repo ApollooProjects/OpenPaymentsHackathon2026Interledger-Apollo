@@ -40,7 +40,7 @@ async function destinoDeRemesa({ celular, cedula, destinatarioWallet, nombreRemi
     if (!numero) throw errorHttp(400, 'Celular inválido');
     if (!soloDigitos(cedula)) throw errorHttp(400, 'Cédula inválida');
     return {
-        nombre: `Cédula ${soloDigitos(cedula)}`,
+        nombre: `Cédula ••••${soloDigitos(cedula).slice(-4)}`,
         walletUrl: custodia(),
         metadata: { tipo: 'remesa', cedula: soloDigitos(cedula), celular: numero, ...remitente }
     };
@@ -54,6 +54,12 @@ export async function cotizar({ remitente, nombreRemitente, celular, cedula, des
         throw errorHttp(400, 'El monto debe ser un entero positivo en la unidad mínima (centavos)');
     }
     const nombre = String(nombreRemitente ?? '').trim() || null;
+
+    // La red cobra una comisión casi fija (~1 EUR en el testnet): con menos de 2 unidades la cotización no alcanza.
+    const wallet = await op.obtenerWallet(walletRemitente);
+    if (wallet.assetCode !== 'COP' && BigInt(valor) < 2n * 10n ** BigInt(wallet.assetScale)) {
+        throw errorHttp(400, `El envío mínimo es 2 ${wallet.assetCode}`);
+    }
 
     const destino = await destinoDeRemesa({ celular, cedula, destinatarioWallet, nombreRemitente: nombre });
     const cobro = await op.crearCobro({

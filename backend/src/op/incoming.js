@@ -76,6 +76,7 @@ export async function listarCobros({ walletUrl, cedula } = {}) {
             id: cobro.id,
             recibido: cobro.receivedAmount,
             completo: cobro.completed,
+            creado: cobro.createdAt,
             metadata: cobro.metadata ?? {}
         }));
 }

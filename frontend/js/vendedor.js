@@ -53,10 +53,21 @@ async function actualizarPanel() {
         $('[data-barra]').max = Number(deuda) || 1;
         $('[data-barra]').value = Number(pagado);
         $('[data-saldada]').hidden = !(deuda > 0n && pagado >= deuda);
+        mostrarPendiente(estado.retiroPendiente);
         mostrarAviso(aviso, '');
     } catch (error) {
         mostrarAviso(aviso, `No se pudo leer tu reparto: ${error.message}`);
     }
+}
+
+// PIN pedido y todavía sin cobrar: se muestra junto al botón para que se vea que el retiro sí quedó listo.
+let pendiente = null;
+function mostrarPendiente(retiro) {
+    pendiente ??= $('[data-retirar]').insertAdjacentElement('beforebegin', document.createElement('p'));
+    pendiente.hidden = !retiro;
+    if (!retiro) return;
+    const vence = new Date(retiro.vence).toLocaleString('es-CO', { weekday: 'short', hour: 'numeric', minute: '2-digit' });
+    pendiente.textContent = `🔑 PIN activo por ${formatearMonto(retiro.monto)} · vence ${vence}. Llévalo con tu cédula a cualquier corresponsal.`;
 }
 
 function mostrarPanel() {

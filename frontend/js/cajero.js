@@ -26,7 +26,11 @@ formulario.addEventListener('submit', async (evento) => {
         for (let intento = 0; intento < 10; intento += 1) {
             const respuesta = await validarRetiro({ pin, cedula });
             if (respuesta.ok) {
-                mostrar(`✅ Entregado: ${formatearMonto(respuesta.monto)} en efectivo.`, true);
+                const comprobante = respuesta.outgoingPayment
+                    ? ` Comprobante Open Payments: …${respuesta.outgoingPayment.slice(-8)} (Custodia → Corresponsal). Comisión del corresponsal en la demo: $ 0.`
+                    : '';
+                mostrar(`✅ Entregado: ${formatearMonto(respuesta.monto)} en efectivo.${comprobante}`, true);
+                if (respuesta.outgoingPayment) resultado.title = respuesta.outgoingPayment;
                 formulario.reset();
                 return;
             }

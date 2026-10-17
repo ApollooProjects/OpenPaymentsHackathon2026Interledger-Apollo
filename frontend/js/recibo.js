@@ -13,16 +13,66 @@ const TEXTOS = {
     rechazado: '❌ El pago fue rechazado',
 };
 
+// Detalle (con la URL completa al pasar el dedo o el mouse) para ver en el recibo que todo corrió en Open Payments.
+const corto = (url) => {
+    const partes = String(url).split('/').filter(Boolean);
+    const ultimo = partes.pop() || '';
+    return ultimo.length > 12 ? `${partes.pop() || ''}/…${ultimo.slice(-8)}` : `${partes.pop() || ''}/${ultimo}`;
+};
+
+function lineaOp(etiqueta, url) {
+    const fila = document.createElement('li');
+    const codigo = Object.assign(document.createElement('code'), { textContent: corto(url), title: url });
+    fila.append(`${etiqueta}: `, codigo);
+    return fila;
+}
+
 let consulta = 0;
+let detalle = null;
+let nota = null;
 
 function pintar(pago) {
-    estado.textContent = TEXTOS[pago.estado] || `⏳ Procesando (${pago.estado})…`;
+    const llegaron = (pago.destinos || []).filter((d) => d.completo).length;
+    const parcial = pago.estado === 'fallido' && llegaron > 0;
+    estado.textContent = parcial ? '⚠️ Pago parcial: una parte llegó y otra no' : TEXTOS[pago.estado] || `⏳ Procesando (${pago.estado})…`;
     total.textContent = pago.total ? formatearMonto(pago.total) : '';
+    const terminado = ESTADOS_FINALES.includes(pago.estado);
     lista.replaceChildren(...(pago.destinos || []).map((destino) => {
         const fila = document.createElement('li');
-        fila.textContent = `${destino.nombre}: ${formatearMonto(destino.monto)}`;
+        const marca = !terminado ? '' : destino.completo ? '✅ ' : '❌ ';
+        fila.textContent = `${marca}${destino.nombre}: ${formatearMonto(destino.monto)}`;
         return fila;
     }));
+
+    nota ??= seccion.appendChild(document.createElement('p'));
+    const partes = [];
+    if (pago.creado) partes.push(new Date(pago.creado).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' }));
+    if (pago.metodo === 'rapido') partes.push('⚡ pago rápido: sin volver a aprobar');
+    if (pago.metodo === 'consentimiento') partes.push('aprobado en tu wallet');
+    if (pago.error && pago.estado !== 'completado') partes.push(`Motivo: ${pago.error}`);
+    nota.textContent = partes.join(' · ');
+
+    // "Ver en Open Payments": quién pagó y, por cada parte, la wallet, el incoming payment y el outgoing payment.
+    detalle ??= seccion.appendChild(document.createElement('details'));
+    const items = [];
+    if (pago.pagador) items.push(lineaOp('Wallet que paga', pago.pagador));
+    for (const destino of pago.destinos || []) {
+        const sub = document.createElement('li');
+        sub.append(Object.assign(document.createElement('strong'), { textContent: destino.nombre }));
+        const ul = document.createElement('ul');
+        if (destino.walletUrl) ul.append(lineaOp('Wallet', destino.walletUrl));
+        if (destino.incomingPayment) ul.append(lineaOp('Incoming payment', destino.incomingPayment));
+        if (destino.quoteId) ul.append(lineaOp('Quote', destino.quoteId));
+        if (destino.outgoingPayment) ul.append(lineaOp('Outgoing payment', destino.outgoingPayment));
+        sub.append(ul);
+        items.push(sub);
+    }
+    detalle.hidden = items.length === 0;
+    detalle.replaceChildren(
+        Object.assign(document.createElement('summary'), { textContent: 'Ver en Open Payments' }),
+        Object.assign(document.createElement('ul'), {}),
+    );
+    detalle.lastChild.append(...items);
 }
 
 alAbrirPestana('recibo', async (params) => {
@@ -30,6 +80,8 @@ alAbrirPestana('recibo', async (params) => {
     const esta = ++consulta;
     lista.replaceChildren();
     total.textContent = '';
+    if (nota) nota.textContent = '';
+    if (detalle) detalle.hidden = true;
 
     if (!pagoId) {
         estado.textContent = 'Todavía no hay un pago para mostrar.';

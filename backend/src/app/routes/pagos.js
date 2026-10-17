@@ -5,6 +5,7 @@ import * as op from '../../op/index.js';
 import { destinoDelQr } from '../sinCuenta.js';
 import { destinosDeVenta, repartoDelQr } from '../repartos.js';
 import { qrUsado } from '../qr.js';
+import { mensajeParaUsuario } from '../errores.js';
 
 export const rutasPagos = Router();
 
@@ -63,17 +64,28 @@ rutasPagos.post('/pagar/:qrId', async (req, res) => {
 
     // Con reparto (P1) la venta se divide en varios destinos; si no, sin cuenta va a la Custodia (C2.4) o a la wallet del QR.
     const reparto = repartoDelQr(qr.id);
-    const destinos = reparto
-        ? await destinosDeVenta(reparto, { monto, propina: aMonto(req.body?.propina), meseros: qr.meseros })
-        : [destinoDelQr(qr, monto)];
+    let destinos;
+    try {
+        destinos = reparto
+            ? await destinosDeVenta(reparto, { monto, propina: aMonto(req.body?.propina), meseros: qr.meseros })
+            : [destinoDelQr(qr, monto)];
+    } catch (error) {
+        console.error(`POST /pagar/${qr.id}:`, error);
+        return res.status(400).json({ error: mensajeParaUsuario(error, 'pago') });
+    }
 
     // Con pagos rápidos vigentes devuelve { pagoId, estado } (sin consentimiento); si no, { pagoId, redirectUrl }.
-    res.json(await motor.iniciarPago({
-        pagador,
-        clienteId: req.body?.clienteId ?? null,
-        origen: { tipo: 'qr', qrId: qr.id },
-        destinos
-    }));
+    try {
+        res.json(await motor.iniciarPago({
+            pagador,
+            clienteId: req.body?.clienteId ?? null,
+            origen: { tipo: 'qr', qrId: qr.id },
+            destinos
+        }));
+    } catch (error) {
+        console.error(`POST /pagar/${qr.id}:`, error);
+        res.status(400).json({ error: mensajeParaUsuario(error, 'pago') });
+    }
 });
 
 rutasPagos.get('/op/finish', async (req, res) => {
