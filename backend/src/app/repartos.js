@@ -33,11 +33,11 @@ export async function crearReparto({
     ahorroWallet = null, ahorroPorcentaje = 0
 }) {
     if (!String(vendedor ?? '').trim()) throw new Error('Falta el nombre del vendedor');
-    if (!aUrl(proveedorWallet).startsWith('https://')) throw new Error('Falta la wallet del proveedor');
+    if (!aUrl(proveedorWallet).startsWith('https://')) throw new Error('Falta la billetera del proveedor');
     const pct = Number(porcentaje);
     if (!Number.isInteger(pct) || pct < 0 || pct > 100) throw new Error('porcentaje debe ser un entero entre 0 y 100');
     if (deuda !== null && deuda !== undefined && !/^\d+$/.test(String(deuda))) throw new Error('deuda debe ser un entero en centavos');
-    if (conCuenta && !aUrl(vendedorWallet).startsWith('https://')) throw new Error('Con cuenta hace falta la wallet del vendedor');
+    if (conCuenta && !aUrl(vendedorWallet).startsWith('https://')) throw new Error('Escribe la dirección de tu billetera');
     if (!conCuenta && (!soloDigitos(cedula) || !soloDigitos(celular))) throw new Error('Sin cuenta hacen falta la cédula y el celular');
     // Sin cuenta, el celular queda vinculado a la cédula (falla si ya es de otra) y normalizado como lo manda el SMS.
     if (!conCuenta) celular = vinculos.vincular({ cedula, celular }).celular;
@@ -47,9 +47,9 @@ export async function crearReparto({
     if (!Number.isInteger(pctAhorro) || pctAhorro < 0 || pctAhorro > 100) throw new Error('ahorroPorcentaje debe ser un entero entre 0 y 100');
     const walletAhorro = pctAhorro > 0 ? aUrl(ahorroWallet) : null;
     if (pctAhorro > 0) {
-        if (!walletAhorro.startsWith('https://')) throw new Error('Con ahorro hace falta la wallet de ahorro');
+        if (!walletAhorro.startsWith('https://')) throw new Error('Para ahorrar escribe también la billetera de ahorro');
         // En la Custodia el ahorro se sumaría al saldo que se retira con PIN: tiene que ir a otra wallet.
-        if (process.env.CUSTODIA_WALLET && walletAhorro === custodia()) throw new Error('La wallet de ahorro no puede ser la Custodia');
+        if (process.env.CUSTODIA_WALLET && walletAhorro === custodia()) throw new Error('La billetera de ahorro no puede ser la Custodia');
         await op.obtenerWallet(walletAhorro);
     }
 
@@ -194,7 +194,7 @@ export async function resumenReparto(id) {
 export async function retirar(id) {
     const reparto = store.obtenerReparto(id);
     if (!reparto) return { ok: false, error: 'Reparto no encontrado' };
-    if (reparto.conCuenta) return { ok: false, error: 'Con cuenta el dinero ya está en tu wallet: no hace falta retirar' };
+    if (reparto.conCuenta) return { ok: false, error: 'Tu dinero ya está en tu billetera: no hace falta retirarlo' };
 
     const anterior = reparto.cajitaId;
     store.cambiarCajita(reparto.id, await nuevaCajita(reparto));

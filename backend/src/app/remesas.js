@@ -54,7 +54,7 @@ async function destinoDeRemesa({ celular, cedula, destinatarioWallet, nombreRemi
 
 export async function cotizar({ remitente, nombreRemitente, celular, cedula, destinatarioWallet, monto } = {}) {
     const walletRemitente = aUrl(remitente);
-    if (!walletRemitente.startsWith('https://')) throw errorHttp(400, 'Falta la wallet del remitente');
+    if (!walletRemitente.startsWith('https://')) throw errorHttp(400, 'Falta la dirección de tu billetera');
     const valor = typeof monto === 'object' && monto !== null ? monto.value : monto;
     if (!/^\d+$/.test(String(valor ?? '')) || BigInt(valor) <= 0n) {
         throw errorHttp(400, 'El monto debe ser un entero positivo en la unidad mínima (centavos)');

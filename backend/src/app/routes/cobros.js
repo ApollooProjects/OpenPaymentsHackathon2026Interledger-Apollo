@@ -10,7 +10,7 @@ const aUrl = (wallet) => String(wallet ?? '').trim().replace(/^\$/, 'https://');
 // Sin autenticación: solo lee datos que el backend ya tiene, a partir de la wallet address (pública).
 rutasCobros.get('/cobros', async (req, res) => {
     const wallet = aUrl(req.query.wallet);
-    if (!wallet.startsWith('https://')) return res.status(400).json({ error: 'Falta la wallet' });
+    if (!wallet.startsWith('https://')) return res.status(400).json({ error: 'Falta la billetera' });
 
     const movimientos = [];
     let total = null;

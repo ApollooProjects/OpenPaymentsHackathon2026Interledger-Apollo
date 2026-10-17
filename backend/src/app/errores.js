@@ -2,22 +2,22 @@
 // y los internos del motor no se muestran tal cual. El detalle técnico queda en el log del servidor.
 
 const INTERNOS = {
-    'La wallet no devolvió interact_ref': 'La wallet no confirmó el pago',
-    'El hash de la redirección no es válido': 'No pudimos verificar la respuesta de la wallet. Intenta de nuevo'
+    'La wallet no devolvió interact_ref': 'Tu billetera no confirmó el pago',
+    'El hash de la redirección no es válido': 'No pudimos verificar la respuesta de la billetera. Intenta de nuevo'
 };
 
 const POR_CONTEXTO = {
     pago: {
-        GET: 'No encontramos esa wallet. Revisa la dirección (empieza por $ilp… o https://)',
+        GET: 'No encontramos esa billetera. Revisa la dirección: empieza por https:// o por $',
         POST: 'La billetera no aceptó el pago. Revisa el saldo e intenta de nuevo'
     },
     remesa: {
-        GET: 'No encontramos esa wallet. Revisa la dirección (empieza por $ilp… o https://)',
+        GET: 'No encontramos esa billetera. Revisa la dirección: empieza por https:// o por $',
         POST: 'No se pudo cotizar el envío. Prueba con un monto mayor o intenta de nuevo en un momento'
     },
     reparto: {
-        GET: 'No encontramos alguna de las wallets. Revisa las direcciones (empiezan por $ilp… o https://)',
-        POST: 'La wallet del proveedor no aceptó el cobro. Intenta de nuevo en un momento'
+        GET: 'No encontramos alguna de las billeteras. Revisa las direcciones: empiezan por https:// o por $',
+        POST: 'La billetera del proveedor no aceptó el cobro. Intenta de nuevo en un momento'
     },
     retiro: {
         GET: 'No pudimos completar el retiro en este momento. El dinero sigue a tu nombre: intenta de nuevo',

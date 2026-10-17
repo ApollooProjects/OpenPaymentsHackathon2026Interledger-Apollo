@@ -57,7 +57,7 @@ rutasPagos.post('/pagar/:qrId', async (req, res) => {
     if (qrUsado(qr)) return res.status(409).json({ error: 'Este QR ya se pagó (sirve para un solo pago)' });
 
     const pagador = normalizarWallet(req.body?.pagador);
-    if (!pagador.startsWith('https://')) return res.status(400).json({ error: 'Falta la wallet de quien paga' });
+    if (!pagador.startsWith('https://')) return res.status(400).json({ error: 'Falta la billetera de quien paga' });
 
     const monto = aMonto(qr.monto ?? req.body?.monto);
     if (!monto) return res.status(400).json({ error: 'El monto debe ser un entero positivo en la unidad mínima (centavos)' });

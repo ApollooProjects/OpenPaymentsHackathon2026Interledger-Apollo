@@ -13,7 +13,7 @@ function urlPublica() {
 export async function activar({ clienteId, pagador, tope }) {
     if (!String(clienteId ?? '').trim()) throw new Error('Falta el clienteId');
     const walletUrl = String(pagador ?? '').trim().replace(/^\$/, 'https://');
-    if (!walletUrl.startsWith('https://')) throw new Error('Falta la wallet de quien paga');
+    if (!walletUrl.startsWith('https://')) throw new Error('Falta la billetera de quien paga');
     const valor = typeof tope === 'object' && tope !== null ? tope.value : tope;
     if (!/^\d+$/.test(String(valor ?? '')) || BigInt(valor) <= 0n) throw new Error('El tope debe ser un entero positivo en centavos');
 

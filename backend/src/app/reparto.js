@@ -19,7 +19,7 @@ function leerMeseros(meseros, { exigirWallet }) {
         let wallet = String(typeof m === 'string' ? m : m?.wallet ?? '').trim();
         if (exigirWallet) {
             wallet = wallet.replace(/^\$/, 'https://');
-            if (!wallet.startsWith('https://')) throw new Error('Cada mesero debe ser una wallet https:// o $');
+            if (!wallet.startsWith('https://')) throw new Error('Cada mesero debe tener una billetera que empiece por https:// o por $');
         }
         const porcentaje = typeof m === 'object' && m?.porcentaje !== undefined && m?.porcentaje !== null && m?.porcentaje !== ''
             ? porcentajeValido(m.porcentaje, 'El porcentaje de cada mesero')

@@ -144,7 +144,7 @@ export async function terminarPago({ pagoId, interactRef, hash, resultado }) {
     if (pago.estado !== ESTADOS.ESPERANDO) return resumen(pago);
 
     if (!interactRef) {
-        const error = resultado === 'grant_rejected' ? 'Rechazaste el pago en tu wallet' : 'La wallet no confirmó el pago';
+        const error = resultado === 'grant_rejected' ? 'Rechazaste el pago en tu billetera' : 'Tu billetera no confirmó el pago';
         return resumen(store.actualizarPago(pagoId, { estado: ESTADOS.RECHAZADO, error }));
     }
 
@@ -157,7 +157,7 @@ export async function terminarPago({ pagoId, interactRef, hash, resultado }) {
         hash
     });
     if (!hashValido) {
-        return resumen(store.actualizarPago(pagoId, { estado: ESTADOS.FALLIDO, error: 'No pudimos verificar la respuesta de la wallet. Intenta de nuevo' }));
+        return resumen(store.actualizarPago(pagoId, { estado: ESTADOS.FALLIDO, error: 'No pudimos verificar la respuesta de la billetera. Intenta de nuevo' }));
     }
 
     store.actualizarPago(pagoId, { estado: ESTADOS.PROCESANDO });
