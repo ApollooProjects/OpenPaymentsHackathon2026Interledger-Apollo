@@ -188,6 +188,29 @@ const mock = {
     retirar() {
         return { ok: true };
     },
+    // Remesa falsa: el remitente paga en EUR y llegan pesos (tasa y comisión inventadas, solo para la pantalla).
+    cotizarRemesa({ monto }) {
+        const cobra = { value: monto.value, assetCode: 'EUR', assetScale: 2 };
+        const llega = { value: String(Math.round(Number(monto.value) * 4300 * 0.98)), ...MONEDA_DEMO };
+        const cotizacionId = `mock-cot-${Date.now()}`;
+        const estado = estadoMock();
+        estado.cotizaciones = { ...(estado.cotizaciones || {}), [cotizacionId]: { cobra, llega } };
+        guardarMock(estado);
+        return { cotizacionId, cobra, llega, vence: new Date(Date.now() + 5 * 60 * 1000).toISOString() };
+    },
+    enviarRemesa({ cotizacionId }) {
+        const estado = estadoMock();
+        const cotizacion = estado.cotizaciones?.[cotizacionId];
+        if (!cotizacion) {
+            const error = new Error('La cotización venció: vuelve a cotizar');
+            error.status = 410;
+            throw error;
+        }
+        const pagoId = `mock-${Date.now()}`;
+        estado.pagos[pagoId] = { estado: 'completado', total: cotizacion.cobra, destinos: [{ nombre: 'Familiar', monto: cotizacion.llega }] };
+        guardarMock(estado);
+        return { redirectUrl: `/?mock=1#recibo?pago=${pagoId}` };
+    },
     permiso() {
         return estadoMock().permiso || { activo: false, estado: 'sin_permiso' };
     },
@@ -291,6 +314,19 @@ export async function validarRetiro({ pin, cedula }) {
     const datos = await respuesta.json().catch(() => ({}));
     if (respuesta.status === 404 && !datos.error) datos.error = 'El servicio de retiros todavía no está disponible';
     return { status: respuesta.status, ...datos };
+}
+
+// Capa 4 (C4.2): { remitente, nombreRemitente?, celular?, cedula?, destinatarioWallet?, monto: { value, assetScale } }
+// → { cotizacionId, cobra: Monto, llega: Monto, vence? }. El backend completa assetCode con la moneda de la wallet.
+export function cotizarRemesa(cuerpo) {
+    if (usaMock()) return conMock(() => mock.cotizarRemesa(cuerpo));
+    return pedir('POST', '/remesas/cotizar', cuerpo);
+}
+
+// { cotizacionId } → { redirectUrl } a la pantalla de consentimiento de la wallet del remitente.
+export function enviarRemesa(cuerpo) {
+    if (usaMock()) return conMock(() => mock.enviarRemesa(cuerpo));
+    return pedir('POST', '/remesas', cuerpo);
 }
 
 export function urlImagenQr(qrId) {

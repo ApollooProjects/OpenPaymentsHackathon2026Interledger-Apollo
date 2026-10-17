@@ -61,7 +61,7 @@
                 </fieldset>
                 <label>
                     Tu wallet address
-                    <input name="pagador" type="url" placeholder="https://ilp.interledger-test.dev/tu-wallet" autocomplete="off" required>
+                    <input name="pagador" type="text" inputmode="url" spellcheck="false" autocapitalize="off" placeholder="https://ilp.interledger-test.dev/tu-wallet" autocomplete="off" required>
                 </label>
                 <label data-activar-rapidos>
                     <input type="checkbox" name="pagosRapidos" role="switch">
@@ -96,8 +96,8 @@
                     <label>Cédula <input name="cedula" inputmode="numeric" placeholder="1020304050"></label>
                     <label>Celular <input name="celular" inputmode="tel" placeholder="3001234567"></label>
                 </div>
-                <label data-con-cuenta hidden>Tu wallet address <input name="walletVendedor" type="url" placeholder="https://ilp.interledger-test.dev/tu-wallet"></label>
-                <label>Wallet de tu proveedor <input name="proveedorWallet" type="url" placeholder="https://ilp.interledger-test.dev/proveedor" required></label>
+                <label data-con-cuenta hidden>Tu wallet address <input name="walletVendedor" type="text" inputmode="url" spellcheck="false" autocapitalize="off" placeholder="https://ilp.interledger-test.dev/tu-wallet"></label>
+                <label>Wallet de tu proveedor <input name="proveedorWallet" type="text" inputmode="url" spellcheck="false" autocapitalize="off" placeholder="https://ilp.interledger-test.dev/proveedor" required></label>
                 <div class="grid">
                     <label>% para el proveedor <input name="porcentaje" type="number" min="1" max="100" value="35" required></label>
                     <label>Deuda a saldar (opcional) <input name="deuda" inputmode="decimal" placeholder="$ 40.000"></label>
@@ -155,7 +155,35 @@
             <p><small><a href="#vendedor?reparto=nuevo" data-cambiar hidden>Configurar otro reparto</a></small></p>
             <p data-aviso hidden></p>
         </section>
-        <section id="remitente" hidden><h2>Remitente</h2></section>
+        <section id="remitente" hidden>
+            <h2>Enviar dinero</h2>
+            <p>Manda una remesa a tu familia solo con su celular y su cédula. Sin cuenta, la retira en efectivo en cualquier corresponsal.</p>
+            <form data-cotizar>
+                <label>Tu nombre (lo verá en el SMS) <input name="nombre" placeholder="Carlos" autocomplete="off"></label>
+                <label>Tu wallet address <input name="remitente" type="text" inputmode="url" spellcheck="false" autocapitalize="off" placeholder="https://ilp.interledger-test.dev/tu-wallet" autocomplete="off" required></label>
+                <fieldset>
+                    <label><input type="radio" name="conCuenta" value="no" checked> Mi familiar no tiene cuenta: retira en efectivo</label>
+                    <label><input type="radio" name="conCuenta" value="si"> Mi familiar tiene cuenta: le llega a su wallet</label>
+                </fieldset>
+                <div data-sin-cuenta class="grid">
+                    <label>Celular de quien recibe <input name="celular" inputmode="tel" placeholder="3001234567"></label>
+                    <label>Cédula de quien recibe <input name="cedula" inputmode="numeric" placeholder="1020304050"></label>
+                </div>
+                <label data-con-cuenta hidden>Wallet de quien recibe <input name="destinatarioWallet" type="text" inputmode="url" spellcheck="false" autocapitalize="off" placeholder="https://ilp.interledger-test.dev/su-wallet"></label>
+                <label>Monto a enviar, en tu moneda <input name="monto" inputmode="decimal" placeholder="50" required></label>
+                <button type="submit">Ver cuánto llega</button>
+            </form>
+            <article data-cotizacion hidden>
+                <p>Te cobran <strong data-cobra></strong></p>
+                <p>Llegan <strong data-llega></strong> <span data-a-quien></span></p>
+                <p><small data-tasa></small></p>
+                <div class="grid">
+                    <button type="button" data-enviar>Enviar</button>
+                    <button type="button" class="secondary outline" data-cambiar>Cambiar datos</button>
+                </div>
+            </article>
+            <p data-aviso hidden></p>
+        </section>
         <section id="celular" hidden>
             <h2>Celular</h2>
             <form data-numero role="group">
@@ -214,5 +242,6 @@
     <script type="module" src="js/vendedor.js"></script>
     <script type="module" src="js/celular.js"></script>
     <script type="module" src="js/cajero.js"></script>
+    <script type="module" src="js/remitente.js"></script>
 </body>
 </html>
