@@ -3,6 +3,7 @@ import * as store from '../store.js';
 import * as motor from '../motor.js';
 import * as op from '../../op/index.js';
 import { destinoDelQr } from '../sinCuenta.js';
+import { destinosDeVenta, repartoDelQr } from '../repartos.js';
 
 export const rutasPagos = Router();
 
@@ -56,12 +57,17 @@ rutasPagos.post('/pagar/:qrId', async (req, res) => {
     const monto = aMonto(qr.monto ?? req.body?.monto);
     if (!monto) return res.status(400).json({ error: 'El monto debe ser un entero positivo en la unidad mínima (centavos)' });
 
+    // Con reparto (P1) la venta se divide en varios destinos; si no, sin cuenta va a la Custodia (C2.4) o a la wallet del QR.
+    const reparto = repartoDelQr(qr.id);
+    const destinos = reparto
+        ? await destinosDeVenta(reparto, { monto, propina: aMonto(req.body?.propina), meseros: qr.meseros })
+        : [destinoDelQr(qr, monto)];
+
     const { pagoId, redirectUrl } = await motor.iniciarPago({
         pagador,
         clienteId: req.body?.clienteId ?? null,
         origen: { tipo: 'qr', qrId: qr.id },
-        // Sin cuenta, el destino es la Custodia con la cédula y el celular en la metadata (C2.4).
-        destinos: [destinoDelQr(qr, monto)]
+        destinos
     });
     res.json({ pagoId, redirectUrl });
 });

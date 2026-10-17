@@ -6,6 +6,7 @@ import { db } from './db.js';
 import { guardarQr } from './store.js';
 import { rutasPagos } from './routes/pagos.js';
 import { rutasRetiros } from './routes/retiros.js';
+import { rutasRepartos } from './routes/repartos.js';
 import { rutasQr } from './qr.js';
 import { rutasSms } from './sms.js';
 import { onPagoCompletado } from './motor.js';
@@ -31,6 +32,7 @@ app.get('/salud', (req, res) => {
 
 app.use(rutasPagos);
 app.use(rutasRetiros);
+app.use(rutasRepartos);
 app.use(rutasSms);
 app.use(rutasSmsReal);
 app.use(rutasSinCuenta);

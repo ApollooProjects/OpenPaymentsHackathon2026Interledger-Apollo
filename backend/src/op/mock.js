@@ -44,6 +44,12 @@ export async function rotar({ token, manageUrl }) {
     return { token: `mock-token-${randomUUID()}`, manageUrl: manageUrl ?? `${BASE}/token/${randomUUID()}` };
 }
 
+export async function cerrarCobro(id) {
+    const cobro = cobros.get(id);
+    if (!cobro) throw new Error(`[mock] cobro no encontrado: ${id}`);
+    cobro.completo = true;
+}
+
 export async function consultarCobro(id) {
     const cobro = cobros.get(id);
     if (!cobro) throw new Error(`[mock] cobro no encontrado: ${id}`);

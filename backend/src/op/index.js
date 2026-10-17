@@ -22,6 +22,7 @@ export const pagar = (...args) => implementacion('pagar')(...args);
 export const consultarPago = (...args) => implementacion('consultarPago')(...args);
 export const listarCobros = (...args) => implementacion('listarCobros')(...args);
 export const rotar = (...args) => implementacion('rotar')(...args);
+export const cerrarCobro = (...args) => implementacion('cerrarCobro')(...args);
 export const pedirPermiso = (...args) => implementacion('pedirPermiso')(...args);
 export const continuarPermiso = (...args) => implementacion('continuarPermiso')(...args);
 export const verificarHash = (...args) => implementacion('verificarHash')(...args);

@@ -41,7 +41,7 @@ export async function iniciarPago(plan) {
             monto,
             metadata: { pagoId, destino: destino.nombre, ...destino.metadata }
         })).id;
-        destinos.push({ ...destino, walletUrl: wallet.id, monto, cobroId });
+        destinos.push({ ...destino, walletUrl: wallet.id, monto, cobroId, compartido: Boolean(destino.cobroId) });
     }
 
     const tope = { value: sumar(destinos).toString(), assetCode: pagador.assetCode, assetScale: pagador.assetScale };
@@ -101,8 +101,10 @@ export async function terminarPago({ pagoId, interactRef, hash, resultado }) {
 
         const destinos = [];
         for (const destino of pago.plan.destinos) {
+            // Un cobro compartido (cajita, deuda del proveedor) recibe de muchas ventas: se anota cuánto tenía antes.
+            const recibidoAntes = destino.compartido ? (await op.consultarCobro(destino.cobroId)).recibido.value : undefined;
             const { id } = await op.pagar({ walletUrl: pago.pagador, token, cobroId: destino.cobroId, monto: destino.monto });
-            destinos.push({ ...destino, pagoOpId: id });
+            destinos.push({ ...destino, pagoOpId: id, recibidoAntes });
         }
         store.actualizarPago(pagoId, { estado: ESTADOS.ENVIADO, plan: { ...pago.plan, destinos } });
     } catch (error) {
@@ -131,8 +133,11 @@ export async function confirmar(pagoId, { intentos = 1 } = {}) {
         const destinos = [];
         for (const destino of pago.plan.destinos) {
             const cobro = await op.consultarCobro(destino.cobroId);
-            const fallido = !cobro.completo && (await salienteFallido(pago, destino));
-            destinos.push({ ...destino, recibido: cobro.recibido, completo: cobro.completo, fallido });
+            const llego = destino.compartido
+                ? BigInt(cobro.recibido.value) - BigInt(destino.recibidoAntes ?? 0) >= BigInt(destino.monto.value)
+                : cobro.completo;
+            const fallido = !llego && (await salienteFallido(pago, destino));
+            destinos.push({ ...destino, recibido: cobro.recibido, completo: llego, fallido });
         }
         const listo = destinos.every((d) => d.completo);
         const conFalla = destinos.filter((d) => d.fallido).map((d) => d.nombre);

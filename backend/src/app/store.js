@@ -37,6 +37,22 @@ db.exec(`
         creado TEXT NOT NULL,
         actualizado TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS repartos (
+        id TEXT PRIMARY KEY,
+        qr_id TEXT NOT NULL UNIQUE,
+        vendedor TEXT NOT NULL,
+        con_cuenta INTEGER NOT NULL,
+        vendedor_wallet TEXT,
+        cedula TEXT,
+        celular TEXT,
+        proveedor_wallet TEXT NOT NULL,
+        porcentaje INTEGER NOT NULL,
+        deuda TEXT,
+        deuda_cobro_id TEXT,
+        cajita_id TEXT,
+        cajita_vence TEXT,
+        creado TEXT NOT NULL
+    );
     CREATE TABLE IF NOT EXISTS permisos (
         clave TEXT PRIMARY KEY,
         token TEXT NOT NULL,
@@ -151,6 +167,52 @@ export function cambiarEstadoRetiro(id, de, a, { error = null, pagoOpId } = {}) 
         WHERE id = ? AND estado = ?
     `).run(a, error, pagoOpId ?? null, ahora(), id, de);
     return changes === 1;
+}
+
+function filaAReparto(fila) {
+    if (!fila) return null;
+    return {
+        id: fila.id,
+        qrId: fila.qr_id,
+        vendedor: fila.vendedor,
+        conCuenta: fila.con_cuenta === 1,
+        vendedorWallet: fila.vendedor_wallet,
+        cedula: fila.cedula,
+        celular: fila.celular,
+        proveedorWallet: fila.proveedor_wallet,
+        porcentaje: fila.porcentaje,
+        deuda: fila.deuda,
+        deudaCobroId: fila.deuda_cobro_id,
+        cajitaId: fila.cajita_id,
+        cajitaVence: fila.cajita_vence
+    };
+}
+
+export function crearReparto(r) {
+    db.prepare(`
+        INSERT INTO repartos (id, qr_id, vendedor, con_cuenta, vendedor_wallet, cedula, celular, proveedor_wallet,
+            porcentaje, deuda, deuda_cobro_id, cajita_id, cajita_vence, creado)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(r.id, r.qrId, r.vendedor, r.conCuenta ? 1 : 0, r.vendedorWallet ?? null, r.cedula ?? null, r.celular ?? null,
+        r.proveedorWallet, r.porcentaje, r.deuda ?? null, r.deudaCobroId ?? null, r.cajitaId ?? null, r.cajitaVence ?? null, ahora());
+    return obtenerReparto(r.id);
+}
+
+export function obtenerReparto(id) {
+    return filaAReparto(db.prepare('SELECT * FROM repartos WHERE id = ?').get(id));
+}
+
+export function repartoDelQr(qrId) {
+    return filaAReparto(db.prepare('SELECT * FROM repartos WHERE qr_id = ?').get(qrId));
+}
+
+export function cambiarCajita(id, { cajitaId, cajitaVence }) {
+    db.prepare('UPDATE repartos SET cajita_id = ?, cajita_vence = ? WHERE id = ?').run(cajitaId, cajitaVence, id);
+    return obtenerReparto(id);
+}
+
+export function pagosDelQr(qrId) {
+    return db.prepare("SELECT * FROM pagos WHERE json_extract(plan, '$.origen.qrId') = ? ORDER BY creado").all(qrId).map(filaAPago);
 }
 
 export function guardarPermiso(clave, { token, manageUrl }) {
