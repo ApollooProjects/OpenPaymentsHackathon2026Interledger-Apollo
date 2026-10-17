@@ -1,7 +1,4 @@
 // Cliente de la API de La Cajita (contrato: auth, yo, resumen, QR, pagos, remesas y retiros).
-// Si el backend todavía no tiene las rutas de cuentas (GET /yo responde 404) o se abre con ?falsa=1,
-// usa la API falsa (api-falsa.js), que cumple el mismo contrato en el navegador.
-import { crearApiFalsa } from './api-falsa.js';
 
 class ErrorApi extends Error {
     constructor(mensaje, status, datos) {
@@ -49,17 +46,5 @@ const apiReal = {
     pedirRetiro: (cedula) => pedir('POST', '/retiros', { cedula })
 };
 
-async function elegirApi() {
-    if (new URLSearchParams(location.search).has('falsa')) return crearApiFalsa(ErrorApi);
-    try {
-        const r = await fetch('/yo', { credentials: 'same-origin' });
-        const esJson = (r.headers.get('content-type') || '').includes('json');
-        if (r.status === 404 || !esJson) return crearApiFalsa(ErrorApi);
-    } catch {
-        return crearApiFalsa(ErrorApi);
-    }
-    return apiReal;
-}
-
-export const api = await elegirApi();
+export const api = apiReal;
 export { ErrorApi };
