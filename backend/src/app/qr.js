@@ -4,6 +4,7 @@ import QRCode from 'qrcode';
 import * as op from '../op/index.js';
 import * as store from './store.js';
 import { normalizarMeseros } from './reparto.js';
+import { aWalletUrl, esWalletUrl } from './wallet.js';
 
 // URL a la que lleva el QR impreso: abre directo la pestaña Cliente con ese QR.
 export function urlDelQr(qrId, base) {
@@ -75,8 +76,8 @@ export async function crearQrPersonalizado({ repartoId, monto, descripcion, mese
 // QR de transferencia a cuenta: quien lo escanea paga directo a la wallet de quien cobra (un outgoing a un
 // incoming payment en esa wallet), sin reparto, sin Custodia y sin SMS. Monto opcional en la moneda de esa wallet.
 export async function crearQrTransferencia({ nombre, wallet, monto, concepto } = {}) {
-    const limpio = String(wallet ?? '').trim().replace(/^\$/, 'https://');
-    if (!limpio.startsWith('https://')) throw new Error('La dirección de tu billetera debe empezar por https:// o por $');
+    const limpio = aWalletUrl(wallet);
+    if (!esWalletUrl(limpio)) throw new Error('Escribe la dirección de tu billetera. Ejemplo: $ilp.interledger-test.dev/ana');
     let datos;
     try {
         datos = await op.obtenerWallet(limpio);

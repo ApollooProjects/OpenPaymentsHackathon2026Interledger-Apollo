@@ -2,6 +2,7 @@
 // - a su cuenta: POST /qr/transferencia, el pago va directo de wallet a wallet (sin reparto, sin Custodia, sin SMS);
 // - en efectivo: POST /personas, el dinero queda en la Custodia a nombre de su cédula y sigue SMS → RETIRAR → PIN → Cajero.
 // Quien paga abre el QR en la pestaña Cliente (#cliente?qr=…), igual que el de un puesto.
+import { aWalletUrl, esWalletUrl } from './wallet.js';
 import { alAbrirPestana, aMonto, crearQrTransferencia, formatearMonto, MONEDA_DEMO, registrarPersona, urlImagenQr } from './api.js';
 
 const seccion = document.getElementById('recibir');
@@ -92,8 +93,8 @@ formulario.addEventListener('submit', async (evento) => {
 
     let cuerpo;
     if (destino === 'cuenta') {
-        const wallet = campos.wallet.value.trim();
-        if (!/^(https:\/\/|\$)\S+/.test(wallet)) return mostrarAviso('⚠ La dirección de tu billetera debe empezar por https:// o por $');
+        const wallet = aWalletUrl(campos.wallet.value);
+        if (!esWalletUrl(wallet)) return mostrarAviso('⚠ Escribe la dirección de tu billetera. Ejemplo: $ilp.interledger-test.dev/mateo');
         cuerpo = { nombre, wallet };
     } else {
         const celular = campos.celular.value.replace(/\D/g, '');
