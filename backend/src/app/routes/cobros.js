@@ -1,16 +1,17 @@
 import { Router } from 'express';
 import * as store from '../store.js';
 import { resumenReparto } from '../repartos.js';
+import { aWalletUrl, esWalletUrl } from '../wallet.js';
 
 export const rutasCobros = Router();
 
-const aUrl = (wallet) => String(wallet ?? '').trim().replace(/^\$/, 'https://');
+const aUrl = aWalletUrl;
 
 // Perfil de demo (mesero o proveedor): lo que le ha llegado a su wallet según los pagos ya registrados.
 // Sin autenticación: solo lee datos que el backend ya tiene, a partir de la wallet address (pública).
 rutasCobros.get('/cobros', async (req, res) => {
     const wallet = aUrl(req.query.wallet);
-    if (!wallet.startsWith('https://')) return res.status(400).json({ error: 'Falta la billetera' });
+    if (!esWalletUrl(wallet)) return res.status(400).json({ error: 'Falta la billetera' });
 
     const movimientos = [];
     let total = null;

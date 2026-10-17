@@ -6,6 +6,7 @@ import {
     retirarReparto, urlImagenQr, MONEDA_DEMO
 } from './api.js';
 import { pasoAPaso } from './pasos.js';
+import { aWalletUrl, esWalletUrl } from './wallet.js';
 
 const seccion = document.getElementById('vendedor');
 const $ = (selector) => seccion.querySelector(selector);
@@ -161,21 +162,21 @@ formConfigurar.addEventListener('submit', async (evento) => {
     const cuerpo = {
         vendedor: campos.vendedor.value.trim(),
         conCuenta,
-        proveedorWallet: campos.proveedorWallet.value.trim(),
+        proveedorWallet: aWalletUrl(campos.proveedorWallet.value),
         porcentaje: Number(campos.porcentaje.value),
         deuda: deuda?.value,   // el backend la recibe en centavos
     };
     const pctAhorro = Number(campos.ahorroPorcentaje.value || 0);
     if (pctAhorro > 0) {
         cuerpo.ahorroPorcentaje = pctAhorro;
-        cuerpo.ahorroWallet = campos.ahorroWallet.value.trim().replace(/^\$/, 'https://');
-        if (!cuerpo.ahorroWallet.startsWith('https://')) return mostrarAviso(avisoForm, '⚠ Para ahorrar escribe también la billetera de ahorro. Debe empezar por https:// o por $');
+        cuerpo.ahorroWallet = aWalletUrl(campos.ahorroWallet.value);
+        if (!esWalletUrl(cuerpo.ahorroWallet)) return mostrarAviso(avisoForm, '⚠ Para ahorrar escribe también la billetera de ahorro. Debe empezar por https:// o por $');
     }
-    if (conCuenta) cuerpo.vendedorWallet = campos.walletVendedor.value.trim().replace(/^\$/, 'https://');
+    if (conCuenta) cuerpo.vendedorWallet = aWalletUrl(campos.walletVendedor.value);
     else Object.assign(cuerpo, { cedula: campos.cedula.value.replace(/\D/g, ''), celular: campos.celular.value.replace(/\D/g, '') });
 
     if (textoDeuda && !deuda) return mostrarAviso(avisoForm, '⚠ Escribe lo que le debes solo con números (ejemplo: 40000). Si no le debes nada, déjalo vacío.');
-    if (conCuenta && !cuerpo.vendedorWallet.startsWith('https://')) return mostrarAviso(avisoForm, '⚠ La dirección de tu billetera debe empezar por https:// o por $');
+    if (conCuenta && !esWalletUrl(cuerpo.vendedorWallet)) return mostrarAviso(avisoForm, '⚠ La dirección de tu billetera debe empezar por https:// o por $');
     if (!conCuenta && (!cuerpo.cedula || !cuerpo.celular)) return mostrarAviso(avisoForm, '⚠ Escribe tu cédula y tu celular: los necesitas para sacar tu dinero.');
 
     mostrarAviso(avisoForm, '');
@@ -245,10 +246,10 @@ formQr.addEventListener('submit', async (evento) => {
     // "wallet" → partes iguales; "wallet=70" → por porcentaje (C5.1). El backend valida que sumen 100.
     const meseros = campos.meseros.value.split(/[\s,]+/).filter(Boolean).map((texto) => {
         const [wallet, porcentaje] = texto.trim().split('=');
-        const url = wallet.replace(/^\$/, 'https://');
+        const url = aWalletUrl(wallet);
         return porcentaje === undefined ? url : { wallet: url, porcentaje: Number(porcentaje.replace('%', '')) };
     });
-    if (meseros.some((m) => !(typeof m === 'string' ? m : m.wallet).startsWith('https://'))) return mostrarAviso(aviso, '⚠ Cada billetera de mesero debe empezar por https:// o por $');
+    if (meseros.some((m) => !esWalletUrl(typeof m === 'string' ? m : m.wallet))) return mostrarAviso(aviso, '⚠ Cada billetera de mesero debe empezar por https:// o por $');
 
     const cuerpo = { vendedor: reparto.vendedor, repartoId: reparto.id, tipo: 'personalizado' };
     if (campos.monto.value.trim()) {

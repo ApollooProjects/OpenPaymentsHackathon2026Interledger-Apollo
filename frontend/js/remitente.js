@@ -2,6 +2,7 @@
 // La cotización la hace Open Payments (quote) con el cambio de moneda; el aviso por SMS (H11) lo manda el backend.
 import { alAbrirPestana, cotizarRemesa, enviarRemesa, formatearMonto } from './api.js';
 import { pasoAPaso } from './pasos.js';
+import { aWalletUrl, esWalletUrl } from './wallet.js';
 
 const seccion = document.getElementById('remitente');
 const formulario = seccion.querySelector('[data-cotizar]');
@@ -74,10 +75,10 @@ formulario.addEventListener('submit', async (evento) => {
     mostrarAviso('');
     const campos = formulario.elements;
     const conCuenta = campos.conCuenta.value === 'si';
-    const remitente = campos.remitente.value.trim().replace(/^\$/, 'https://');
+    const remitente = aWalletUrl(campos.remitente.value);
     const monto = aMontoRemitente(campos.monto.value);
 
-    if (!remitente.startsWith('https://')) return mostrarAviso('⚠ La dirección de tu billetera debe empezar por https:// o por $');
+    if (!esWalletUrl(remitente)) return mostrarAviso('⚠ La dirección de tu billetera debe empezar por https:// o por $');
     const modo = campos.modo.value === 'recibe' ? 'recibe' : 'envio';
     if (!monto) {
         return mostrarAviso(modo === 'recibe'
@@ -88,8 +89,8 @@ formulario.addEventListener('submit', async (evento) => {
     const cuerpo = { remitente, monto, modo };
     if (campos.nombre.value.trim()) cuerpo.nombreRemitente = campos.nombre.value.trim();
     if (conCuenta) {
-        cuerpo.destinatarioWallet = campos.destinatarioWallet.value.trim().replace(/^\$/, 'https://');
-        if (!cuerpo.destinatarioWallet.startsWith('https://')) return mostrarAviso('⚠ La billetera de tu familiar debe empezar por https:// o por $');
+        cuerpo.destinatarioWallet = aWalletUrl(campos.destinatarioWallet.value);
+        if (!esWalletUrl(cuerpo.destinatarioWallet)) return mostrarAviso('⚠ La billetera de tu familiar debe empezar por https:// o por $');
     } else {
         cuerpo.celular = campos.celular.value.replace(/\D/g, '');
         cuerpo.cedula = campos.cedula.value.replace(/\D/g, '');

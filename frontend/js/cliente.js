@@ -1,6 +1,7 @@
 // Pestaña Cliente (H3, H5, H5b, H5c): escanea el QR → escribe el monto → (propina) → Pagar → consentimiento en su wallet.
 // Con pagos rápidos activos la compra sale sin volver a aprobar.
 import {
+import { aWalletUrl, esWalletUrl } from './wallet.js';
     activarPagosRapidos, alAbrirPestana, aMonto, cancelarPermiso, formatearMonto, iniciarPago, idCliente, obtenerPermiso,
     obtenerQr, MONEDA_DEMO
 } from './api.js';
@@ -216,8 +217,8 @@ formulario.addEventListener('submit', async (evento) => {
         mostrarAviso('⚠ Escribe cuánto de propina, solo con números (ejemplo: 1000), o elige otra opción.');
         return;
     }
-    const pagador = campoPagador.value.trim().replace(/^\$/, 'https://');
-    if (!pagador.startsWith('https://')) {
+    const pagador = aWalletUrl(campoPagador.value);
+    if (!esWalletUrl(pagador)) {
         billetera.open = true;
         mostrarAviso('⚠ La dirección de tu billetera debe empezar por https:// o por $');
         return;

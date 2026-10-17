@@ -6,15 +6,12 @@ import { destinoDelQr } from '../sinCuenta.js';
 import { destinosDeVenta, repartoDelQr } from '../repartos.js';
 import { qrUsado } from '../qr.js';
 import { mensajeParaUsuario } from '../errores.js';
+import { aWalletUrl, esWalletUrl } from '../wallet.js';
 
 export const rutasPagos = Router();
 
-// Acepta la wallet como la muestra la Test Wallet ($ilp…) o como URL (https://ilp…).
-function normalizarWallet(texto) {
-    const limpio = String(texto ?? '').trim();
-    if (limpio.startsWith('$')) return `https://${limpio.slice(1)}`;
-    return limpio;
-}
+// Acepta la wallet como la muestra la Test Wallet ($ilp…), como URL (https://ilp…) o sin esquema (ver wallet.js).
+const normalizarWallet = aWalletUrl;
 
 function aMonto(entrada) {
     const value = typeof entrada === 'object' && entrada !== null ? entrada.value : entrada;
@@ -57,7 +54,7 @@ rutasPagos.post('/pagar/:qrId', async (req, res) => {
     if (qrUsado(qr)) return res.status(409).json({ error: 'Este QR ya se pagó (sirve para un solo pago)' });
 
     const pagador = normalizarWallet(req.body?.pagador);
-    if (!pagador.startsWith('https://')) return res.status(400).json({ error: 'Falta la billetera de quien paga' });
+    if (!esWalletUrl(pagador)) return res.status(400).json({ error: 'Falta la billetera de quien paga' });
 
     const monto = aMonto(qr.monto ?? req.body?.monto);
     if (!monto) return res.status(400).json({ error: 'El monto debe ser un entero positivo en la unidad mínima (centavos)' });

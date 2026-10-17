@@ -17,6 +17,7 @@ import { avisarLlegada, registrar, rutasSinCuenta } from './sinCuenta.js';
 import './conexiones.js';
 import { rutasSmsReal } from './smsReal.js';
 import { mensajeParaUsuario } from './errores.js';
+import { aWalletUrl } from './wallet.js';
 
 const raiz = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 
@@ -60,7 +61,7 @@ if (process.env.DEMO_VENDEDOR_WALLET) {
     guardarQr({
         id: 'demo',
         vendedor: process.env.DEMO_VENDEDOR_NOMBRE || 'Doña Rita',
-        walletUrl: process.env.DEMO_VENDEDOR_WALLET.replace(/^\$/, 'https://')
+        walletUrl: aWalletUrl(process.env.DEMO_VENDEDOR_WALLET)
     });
 }
 
