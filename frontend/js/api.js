@@ -104,7 +104,7 @@ const mock = {
             qrId, vendedor: 'Doña Rita', tipo: 'estatico', monto: null, meseros: [], vigenteHasta: null, propina: false,
         };
     },
-    pagar(qrId, { monto, propina, pagosRapidos }) {
+    pagar(qrId, { monto, propina }) {
         const estado = estadoMock();
         const qr = estado.qrs[qrId] || mock.qr(qrId);
         const reparto = Object.values(estado.repartos).find((r) => r.qrId === qrId || r.id === qr.repartoId);
@@ -134,13 +134,10 @@ const mock = {
 
         // Pagos rápidos vigentes y con tope suficiente: sale sin consentimiento.
         const permiso = estado.permiso;
-        if (permiso?.activo && BigInt(permiso.restante.value) >= total) {
-            permiso.restante = pesos(BigInt(permiso.restante.value) - total);
+        if (permiso?.activo && BigInt(permiso.disponible.value) >= total) {
+            permiso.disponible = pesos(BigInt(permiso.disponible.value) - total);
             guardarMock(estado);
             return { pagoId, estado: 'completado' };
-        }
-        if (pagosRapidos?.tope) {
-            estado.permiso = { activo: true, tope: pagosRapidos.tope, restante: pesos(BigInt(pagosRapidos.tope.value) - total) };
         }
         guardarMock(estado);
         return { redirectUrl: `/?mock=1#recibo?pago=${pagoId}` };
@@ -192,7 +189,13 @@ const mock = {
         return { ok: true };
     },
     permiso() {
-        return estadoMock().permiso || { activo: false };
+        return estadoMock().permiso || { activo: false, estado: 'sin_permiso' };
+    },
+    activarPermiso({ tope }) {
+        const estado = estadoMock();
+        estado.permiso = { activo: true, estado: 'activo', tope, disponible: tope };
+        guardarMock(estado);
+        return { redirectUrl: '/?mock=1#cliente?pagosRapidos=activo' };
     },
     cancelarPermiso() {
         const estado = estadoMock();
@@ -218,7 +221,7 @@ export function obtenerQr(qrId) {
     return pedir('GET', `/qr/${encodeURIComponent(qrId)}`);
 }
 
-// cuerpo: { pagador, monto, propina?, clienteId, pagosRapidos?: { tope } }
+// cuerpo: { pagador, monto, propina?, clienteId }
 // → { redirectUrl } (hay que aprobar) o { pagoId, estado } (pagos rápidos vigentes, sin consentimiento)
 export function iniciarPago(qrId, cuerpo) {
     if (usaMock()) return conMock(() => mock.pagar(qrId, cuerpo));
@@ -254,7 +257,7 @@ export function retirarReparto(id) {
     return pedir('POST', `/repartos/${encodeURIComponent(id)}/retirar`);
 }
 
-// Capa 3 (C3.6, propuesto): → { activo, tope?: Monto, restante?: Monto }. Sin la ruta todavía, se asume inactivo.
+// Capa 3 (C3.6): → { activo, estado, tope?: Monto, disponible?: Monto, renueva? }. Sin la ruta, se asume inactivo.
 export async function obtenerPermiso(clienteId) {
     if (usaMock()) return mock.permiso();
     try {
@@ -263,6 +266,13 @@ export async function obtenerPermiso(clienteId) {
         if (error.status === 404) return { activo: false };
         throw error;
     }
+}
+
+// Activar pagos rápidos (C3.6): { clienteId, pagador, tope } → { redirectUrl } a la pantalla de consentimiento.
+// Al volver, la wallet deja al cliente en /#cliente?pagosRapidos=<activo | rechazado | fallido>.
+export function activarPagosRapidos(cuerpo) {
+    if (usaMock()) return conMock(() => mock.activarPermiso(cuerpo));
+    return pedir('POST', '/permisos', cuerpo);
 }
 
 export function cancelarPermiso(clienteId) {

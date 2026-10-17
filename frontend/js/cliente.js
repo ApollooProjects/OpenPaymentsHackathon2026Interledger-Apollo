@@ -1,7 +1,8 @@
 // Pestaña Cliente (H3, H5, H5b, H5c): escanea el QR → escribe el monto → (propina) → Pagar → consentimiento en su wallet.
 // Con pagos rápidos activos la compra sale sin volver a aprobar.
 import {
-    alAbrirPestana, aMonto, cancelarPermiso, formatearMonto, iniciarPago, idCliente, obtenerPermiso, obtenerQr, MONEDA_DEMO
+    activarPagosRapidos, alAbrirPestana, aMonto, cancelarPermiso, formatearMonto, iniciarPago, idCliente, obtenerPermiso,
+    obtenerQr, MONEDA_DEMO
 } from './api.js';
 
 // Tope semanal de los pagos rápidos (SDD H5c: "hasta $20.000 por semana").
@@ -38,6 +39,28 @@ function pagadorGuardado() {
     try { return localStorage.getItem('cajita.pagador') || ''; } catch { return ''; }
 }
 
+// Mientras el cliente aprueba los pagos rápidos en su wallet se guarda la compra que estaba haciendo,
+// para volver a ella y pagar con un toque.
+function guardarCompraPendiente(datos) {
+    try { sessionStorage.setItem('cajita.compraPendiente', JSON.stringify(datos)); } catch { /* sin almacenamiento */ }
+}
+
+function tomarCompraPendiente() {
+    try {
+        const datos = JSON.parse(sessionStorage.getItem('cajita.compraPendiente') || 'null');
+        sessionStorage.removeItem('cajita.compraPendiente');
+        return datos;
+    } catch {
+        return null;
+    }
+}
+
+const AVISOS_RAPIDOS = {
+    activo: '⚡ Listo: pagos rápidos activos. Toca Pagar y sale sin volver a aprobar.',
+    rechazado: 'No aceptaste los pagos rápidos. Puedes pagar aprobando esta compra.',
+    fallido: 'No se pudieron activar los pagos rápidos. Puedes pagar aprobando esta compra.',
+};
+
 function montoBase() {
     return qrActual?.monto || aMonto(campoMonto.value, MONEDA_DEMO);
 }
@@ -61,7 +84,7 @@ function actualizarTotal() {
         return;
     }
     const total = { ...base, value: (BigInt(base.value) + BigInt(propina?.value || 0)).toString() };
-    const rapido = permisoActual.activo && permisoActual.restante && BigInt(permisoActual.restante.value) >= BigInt(total.value);
+    const rapido = permisoActual.activo && permisoActual.disponible && BigInt(permisoActual.disponible.value) >= BigInt(total.value);
     textoTotal.textContent = propina
         ? `Total: ${formatearMonto(total)} (${formatearMonto(base)} + ${formatearMonto(propina)} de propina)`
         : `Total: ${formatearMonto(total)}`;
@@ -77,13 +100,21 @@ async function cargarPermiso() {
     bloqueRapidos.hidden = !permisoActual.activo;
     activarRapidos.hidden = permisoActual.activo;
     if (permisoActual.activo) {
-        seccion.querySelector('[data-restante]').textContent = formatearMonto(permisoActual.restante);
+        seccion.querySelector('[data-restante]').textContent = formatearMonto(permisoActual.disponible);
         seccion.querySelector('[data-tope-activo]').textContent = formatearMonto(permisoActual.tope);
     }
     actualizarTotal();
 }
 
 alAbrirPestana('cliente', async (params) => {
+    const resultadoRapidos = params.get('pagosRapidos');
+    const pendiente = resultadoRapidos ? tomarCompraPendiente() : null;
+    // Vuelta de activar pagos rápidos: retomar el QR y el monto que estaba pagando.
+    if (resultadoRapidos && !params.get('qr') && pendiente?.qrId) {
+        guardarCompraPendiente(pendiente);
+        location.hash = `cliente?qr=${encodeURIComponent(pendiente.qrId)}&pagosRapidos=${encodeURIComponent(resultadoRapidos)}`;
+        return;
+    }
     const qrId = params.get('qr');
     qrActual = null;
     mostrarAviso('');
@@ -116,8 +147,15 @@ alAbrirPestana('cliente', async (params) => {
     bloquePropina.hidden = !(qrActual.propina || qrActual.meseros?.length);
     formulario.elements.propina.value = '0';
     campoPropinaOtra.value = '';
+    formulario.elements.pagosRapidos.checked = false;
+    if (pendiente && !qrActual.monto) campoMonto.value = pendiente.monto || '';
+    if (pendiente?.propina) {
+        formulario.elements.propina.value = pendiente.propina;
+        campoPropinaOtra.value = pendiente.propinaOtra || '';
+    }
     formulario.hidden = false;
     await cargarPermiso();
+    if (resultadoRapidos) mostrarAviso(AVISOS_RAPIDOS[resultadoRapidos] || `Pagos rápidos: ${resultadoRapidos}`);
 });
 
 formulario.addEventListener('input', actualizarTotal);
@@ -156,11 +194,22 @@ formulario.addEventListener('submit', async (evento) => {
 
     const cuerpo = { pagador, monto, clienteId: idCliente() };
     if (propina) cuerpo.propina = propina;
-    if (!permisoActual.activo && formulario.elements.pagosRapidos.checked) cuerpo.pagosRapidos = { tope: TOPE_RAPIDOS };
 
     boton.setAttribute('aria-busy', 'true');
     boton.disabled = true;
     try {
+        // Activar pagos rápidos es un consentimiento aparte (tope semanal); al volver, la compra sale con un toque.
+        if (!permisoActual.activo && formulario.elements.pagosRapidos.checked) {
+            guardarCompraPendiente({
+                qrId: qrActual.qrId,
+                monto: campoMonto.value,
+                propina: formulario.elements.propina.value,
+                propinaOtra: campoPropinaOtra.value,
+            });
+            const { redirectUrl } = await activarPagosRapidos({ clienteId: idCliente(), pagador, tope: TOPE_RAPIDOS });
+            location.href = redirectUrl;
+            return;
+        }
         const respuesta = await iniciarPago(qrActual.qrId, cuerpo);
         if (respuesta.redirectUrl) {
             location.href = respuesta.redirectUrl;   // pantalla de consentimiento de su wallet
