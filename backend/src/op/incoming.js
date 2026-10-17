@@ -47,6 +47,13 @@ export async function consultarCobro(id) {
     return { id: cobro.id, recibido: cobro.receivedAmount, completo: cobro.completed };
 }
 
+export async function cerrarCobro(id) {
+    const op = await obtenerCliente();
+    const publico = await op.incomingPayment.getPublic({ url: id });
+    const accessToken = await tokenIncoming(publico.authServer, ['complete']);
+    await op.incomingPayment.complete({ url: id, accessToken });
+}
+
 export async function listarCobros({ walletUrl, cedula } = {}) {
     const wallet = await obtenerWallet(walletUrl);
     const op = await obtenerCliente();
