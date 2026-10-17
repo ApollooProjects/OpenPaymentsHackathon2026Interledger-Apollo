@@ -46,7 +46,18 @@ export async function continuarPermiso({ continueUri, continueToken, interactRef
     );
     if (!isFinalizedGrantWithAccessToken(grant)) throw new Error('El grant de outgoing-payment no quedó finalizado');
 
-    return { token: grant.access_token.value, manageUrl: grant.access_token.manage };
+    return {
+        token: grant.access_token.value,
+        manageUrl: grant.access_token.manage,
+        continueUri: grant.continue?.uri ?? continueUri,
+        continueToken: grant.continue?.access_token?.value ?? continueToken
+    };
+}
+
+// Cancelar el grant (DELETE a su URI de continuación): el permiso deja de servir para nuevos pagos.
+export async function revocarPermiso({ continueUri, continueToken }) {
+    const op = await obtenerCliente();
+    await op.grant.cancel({ url: continueUri, accessToken: continueToken });
 }
 
 export function verificarHash({ clientNonce, interactNonce, interactRef, authServerUrl, hash }) {

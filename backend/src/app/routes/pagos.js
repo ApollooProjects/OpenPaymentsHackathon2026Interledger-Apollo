@@ -63,13 +63,13 @@ rutasPagos.post('/pagar/:qrId', async (req, res) => {
         ? await destinosDeVenta(reparto, { monto, propina: aMonto(req.body?.propina), meseros: qr.meseros })
         : [destinoDelQr(qr, monto)];
 
-    const { pagoId, redirectUrl } = await motor.iniciarPago({
+    // Con pagos rápidos vigentes devuelve { pagoId, estado } (sin consentimiento); si no, { pagoId, redirectUrl }.
+    res.json(await motor.iniciarPago({
         pagador,
         clienteId: req.body?.clienteId ?? null,
         origen: { tipo: 'qr', qrId: qr.id },
         destinos
-    });
-    res.json({ pagoId, redirectUrl });
+    }));
 });
 
 rutasPagos.get('/op/finish', async (req, res) => {
