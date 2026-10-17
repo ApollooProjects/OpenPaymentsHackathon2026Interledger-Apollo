@@ -11,7 +11,8 @@ function urlPublica() {
     return (process.env.PUBLIC_URL || `http://localhost:${Number(process.env.PORT) || 3000}`).replace(/\/$/, '');
 }
 
-export async function activar({ clienteId, pagador, tope }) {
+// finishPath: a dónde vuelve el consentimiento (la app producto usa el suyo; la demo, el de siempre).
+export async function activar({ clienteId, pagador, tope, finishPath = '/op/finish-permiso' }) {
     if (!String(clienteId ?? '').trim()) throw new Error('Falta el clienteId');
     const walletUrl = aWalletUrl(pagador);
     if (!esWalletUrl(walletUrl)) throw new Error('Falta la billetera de quien paga');
@@ -25,7 +26,7 @@ export async function activar({ clienteId, pagador, tope }) {
         walletUrl: wallet.id,
         tope: { value: String(valor) },
         interval: `R/${inicio}/P1W`,
-        finishUri: `${urlPublica()}/op/finish-permiso?cliente=${encodeURIComponent(clienteId)}`,
+        finishUri: `${urlPublica()}${finishPath}?cliente=${encodeURIComponent(clienteId)}`,
         nonce: clientNonce
     });
 
