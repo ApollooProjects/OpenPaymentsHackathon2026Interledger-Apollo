@@ -2,6 +2,7 @@ import { Router } from 'express';
 import * as store from '../store.js';
 import { resumenReparto } from '../repartos.js';
 import { aWalletUrl, esWalletUrl } from '../wallet.js';
+import { delExterior } from '../sinCuenta.js';
 
 export const rutasCobros = Router();
 
@@ -18,7 +19,7 @@ rutasCobros.get('/cobros', async (req, res) => {
     for (const pago of store.pagosHacia(wallet).filter((p) => p.estado === 'completado')) {
         const origen = pago.plan.origen ?? {};
         const de = origen.tipo === 'remesa'
-            ? `Remesa de ${origen.nombreRemitente || 'el exterior'}`
+            ? (origen.nombreRemitente ? `Remesa de ${origen.nombreRemitente}` : (delExterior(pago) ? 'Remesa del exterior' : 'Envío de dinero'))
             : (origen.qrId && store.obtenerQr(origen.qrId)?.vendedor) || 'Pago con QR';
         for (const destino of pago.plan.destinos.filter((d) => d.walletUrl === wallet)) {
             movimientos.push({ fecha: pago.creado, de, concepto: destino.nombre, monto: destino.monto });

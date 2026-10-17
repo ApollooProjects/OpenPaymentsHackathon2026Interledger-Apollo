@@ -6,7 +6,7 @@ import * as op from '../../op/index.js';
 import * as store from '../store.js';
 import * as cuentas from '../cuentas.js';
 import * as retiros from '../retiros.js';
-import { registrar } from '../sinCuenta.js';
+import { delExterior, registrar } from '../sinCuenta.js';
 import { crearQrTransferencia, urlDelQr } from '../qr.js';
 import { aWalletUrl } from '../wallet.js';
 import { conSesion, responderError } from './auth.js';
@@ -36,7 +36,7 @@ const VISIBLE = (pago) => !['esperando_consentimiento', 'rechazado'].includes(pa
 
 function contraparteRecibido(pago) {
     const origen = pago.plan.origen ?? {};
-    if (origen.tipo === 'remesa') return origen.nombreRemitente || 'Remesa del exterior';
+    if (origen.tipo === 'remesa') return origen.nombreRemitente || (delExterior(pago) ? 'Remesa del exterior' : 'Envío de dinero');
     return nombreDeWallet(pago.pagador) || 'Pago con QR';
 }
 

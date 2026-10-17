@@ -97,7 +97,7 @@ export async function avisarLlegada(resumen) {
         const saldo = cedula ? await retiros.saldo({ cedula }).then((r) => (r.ok ? r.saldo : null)).catch(() => null) : null;
         const pendiente = cedula ? retiros.retiroPendiente(cedula) : null;
         let texto = pago.plan.origen?.tipo === 'remesa'
-            ? textoRemesa(recibido, destino.metadata?.remitente ?? pago.plan.origen?.nombreRemitente, saldo)
+            ? textoRemesa(recibido, destino.metadata?.remitente ?? pago.plan.origen?.nombreRemitente, saldo, delExterior(pago))
             : `La Cajita: te llegaron ${formatear(recibido)} por un pago con QR.${saldo ? ` Saldo: ${formatear(saldo)}.` : ''} `
                 + 'Responde RETIRAR para sacarlo en efectivo o SALDO para ver cuánto tienes.';
         if (pendiente) {
@@ -107,12 +107,20 @@ export async function avisarLlegada(resumen) {
     }
 }
 
+// Una remesa es "del exterior" solo si quien paga lo hace en otra moneda (tope = débito en la moneda del pagador).
+// Con la misma moneda es un envío local y los textos no dicen "exterior".
+export function delExterior(pago) {
+    const pagaEn = pago?.plan?.tope?.assetCode;
+    const llegaEn = pago?.plan?.destinos?.[0]?.monto?.assetCode;
+    return Boolean(pagaEn && llegaEn && pagaEn !== llegaEn);
+}
+
 // H11: "Te llegaron $200.000 de Carlos (desde el exterior). Responde RETIRAR para recibir tu PIN de retiro."
 // Si llegan varias remesas antes de retirar, SALDO y RETIRAR ya las suman (todas quedan en la Custodia con la cédula).
-export function textoRemesa(recibido, remitente, saldo = null) {
+export function textoRemesa(recibido, remitente, saldo = null, exterior = true) {
     const de = remitente ? ` de ${remitente}` : '';
     const total = saldo && saldo.value !== recibido.value ? ` Saldo: ${formatear(saldo)}.` : '';
-    return `La Cajita: te llegaron ${formatear(recibido)}${de} desde el exterior.${total} `
+    return `La Cajita: te llegaron ${formatear(recibido)}${de}${exterior ? ' desde el exterior' : ''}.${total} `
         + 'Responde RETIRAR para recibir tu PIN de retiro o SALDO para ver cuánto tienes.';
 }
 
