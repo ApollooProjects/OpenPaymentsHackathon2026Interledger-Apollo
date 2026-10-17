@@ -22,6 +22,27 @@ db.exec(`
         creado TEXT NOT NULL,
         actualizado TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS retiros (
+        id TEXT PRIMARY KEY,
+        cedula TEXT NOT NULL,
+        celular TEXT,
+        monto TEXT NOT NULL,
+        cobro_id TEXT NOT NULL,
+        pin_hash TEXT NOT NULL,
+        pin_sal TEXT NOT NULL,
+        vence TEXT NOT NULL,
+        estado TEXT NOT NULL,
+        pago_op_id TEXT,
+        error TEXT,
+        creado TEXT NOT NULL,
+        actualizado TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS permisos (
+        clave TEXT PRIMARY KEY,
+        token TEXT NOT NULL,
+        manage_url TEXT,
+        actualizado TEXT NOT NULL
+    );
 `);
 
 const ahora = () => new Date().toISOString();
@@ -87,4 +108,59 @@ export function actualizarPago(id, cambios) {
 
 export function obtenerPago(id) {
     return filaAPago(db.prepare('SELECT * FROM pagos WHERE id = ?').get(id));
+}
+
+function filaARetiro(fila) {
+    if (!fila) return null;
+    return {
+        id: fila.id,
+        cedula: fila.cedula,
+        celular: fila.celular,
+        monto: JSON.parse(fila.monto),
+        cobroId: fila.cobro_id,
+        pinHash: fila.pin_hash,
+        pinSal: fila.pin_sal,
+        vence: fila.vence,
+        estado: fila.estado,
+        pagoOpId: fila.pago_op_id,
+        error: fila.error
+    };
+}
+
+export function crearRetiro({ id, cedula, celular, monto, cobroId, pinHash, pinSal, vence, estado }) {
+    const momento = ahora();
+    db.prepare(`
+        INSERT INTO retiros (id, cedula, celular, monto, cobro_id, pin_hash, pin_sal, vence, estado, creado, actualizado)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(id, cedula, celular ?? null, JSON.stringify(monto), cobroId, pinHash, pinSal, vence, estado, momento, momento);
+    return obtenerRetiro(id);
+}
+
+export function obtenerRetiro(id) {
+    return filaARetiro(db.prepare('SELECT * FROM retiros WHERE id = ?').get(id));
+}
+
+export function retirosDe(cedula) {
+    return db.prepare('SELECT * FROM retiros WHERE cedula = ? ORDER BY creado').all(cedula).map(filaARetiro);
+}
+
+// Cambia de estado solo si sigue en el estado esperado: evita entregar dos veces el mismo retiro.
+export function cambiarEstadoRetiro(id, de, a, { error = null, pagoOpId } = {}) {
+    const { changes } = db.prepare(`
+        UPDATE retiros SET estado = ?, error = ?, pago_op_id = COALESCE(?, pago_op_id), actualizado = ?
+        WHERE id = ? AND estado = ?
+    `).run(a, error, pagoOpId ?? null, ahora(), id, de);
+    return changes === 1;
+}
+
+export function guardarPermiso(clave, { token, manageUrl }) {
+    db.prepare(`
+        INSERT INTO permisos (clave, token, manage_url, actualizado) VALUES (?, ?, ?, ?)
+        ON CONFLICT(clave) DO UPDATE SET token = excluded.token, manage_url = excluded.manage_url, actualizado = excluded.actualizado
+    `).run(clave, token, manageUrl ?? null, ahora());
+}
+
+export function obtenerPermiso(clave) {
+    const fila = db.prepare('SELECT * FROM permisos WHERE clave = ?').get(clave);
+    return fila ? { token: fila.token, manageUrl: fila.manage_url } : null;
 }

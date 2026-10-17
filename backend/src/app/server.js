@@ -5,6 +5,7 @@ import express from 'express';
 import { db } from './db.js';
 import { guardarQr } from './store.js';
 import { rutasPagos } from './routes/pagos.js';
+import { rutasRetiros } from './routes/retiros.js';
 import { rutasQr } from './qr.js';
 
 const raiz = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
@@ -23,6 +24,7 @@ app.get('/salud', (req, res) => {
 });
 
 app.use(rutasPagos);
+app.use(rutasRetiros);
 
 app.use((error, req, res, next) => {
     console.error(error);
