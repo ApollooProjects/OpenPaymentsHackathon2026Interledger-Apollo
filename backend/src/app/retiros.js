@@ -138,7 +138,7 @@ async function pagarConPermiso({ custodia, retiro }) {
     try {
         return await op.pagar({ ...pago, token: permiso.token });
     } catch (error) {
-        if (error.status !== 401) throw error;
+        if (error.status !== 401 && error.status !== 403) throw error;
         permiso = await op.rotar(permiso);
         store.guardarPermiso(PERMISO_CUSTODIA, permiso);
         return op.pagar({ ...pago, token: permiso.token });
