@@ -14,3 +14,9 @@ export async function pagar({ walletUrl, token, cobroId, monto }) {
     );
     return { id: pago.id };
 }
+
+export async function consultarPago({ id, token }) {
+    const op = await obtenerCliente();
+    const pago = await op.outgoingPayment.get({ url: id, accessToken: token });
+    return { id: pago.id, fallido: pago.failed, enviado: pago.sentAmount, debito: pago.debitAmount };
+}

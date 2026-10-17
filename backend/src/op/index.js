@@ -18,6 +18,7 @@ export const obtenerWallet = (...args) => implementacion('obtenerWallet')(...arg
 export const crearCobro = (...args) => implementacion('crearCobro')(...args);
 export const consultarCobro = (...args) => implementacion('consultarCobro')(...args);
 export const pagar = (...args) => implementacion('pagar')(...args);
+export const consultarPago = (...args) => implementacion('consultarPago')(...args);
 export const pedirPermiso = (...args) => implementacion('pedirPermiso')(...args);
 export const continuarPermiso = (...args) => implementacion('continuarPermiso')(...args);
 export const verificarHash = (...args) => implementacion('verificarHash')(...args);

@@ -91,11 +91,13 @@ export async function terminarPago({ pagoId, interactRef, hash, resultado }) {
 
     store.actualizarPago(pagoId, { estado: ESTADOS.PROCESANDO });
     try {
-        const { token } = await op.continuarPermiso({
+        const { token, manageUrl } = await op.continuarPermiso({
             continueUri: permiso.continueUri,
             continueToken: permiso.continueToken,
             interactRef
         });
+        // El mismo token (con acción read) sirve después para saber si un pago saliente falló.
+        store.actualizarPago(pagoId, { permiso: { ...permiso, token, manageUrl } });
 
         const destinos = [];
         for (const destino of pago.plan.destinos) {
@@ -110,7 +112,18 @@ export async function terminarPago({ pagoId, interactRef, hash, resultado }) {
     return resumen(await confirmar(pagoId, { intentos: 5 }));
 }
 
+async function salienteFallido(pago, destino) {
+    if (!destino.pagoOpId || !pago.permiso?.token) return false;
+    try {
+        const saliente = await op.consultarPago({ id: destino.pagoOpId, token: pago.permiso.token });
+        return saliente.fallido;
+    } catch {
+        return false;
+    }
+}
+
 // Los pagos salientes se liquidan un instante después de crearse: se confirma leyendo cada cobro.
+// Si un cobro no se completa, se revisa el pago saliente: la wallet lo marca failed (p. ej. sin saldo).
 export async function confirmar(pagoId, { intentos = 1 } = {}) {
     let pago = store.obtenerPago(pagoId);
     for (let i = 0; i < intentos && pago.estado === ESTADOS.ENVIADO; i++) {
@@ -118,12 +131,20 @@ export async function confirmar(pagoId, { intentos = 1 } = {}) {
         const destinos = [];
         for (const destino of pago.plan.destinos) {
             const cobro = await op.consultarCobro(destino.cobroId);
-            destinos.push({ ...destino, recibido: cobro.recibido, completo: cobro.completo });
+            const fallido = !cobro.completo && (await salienteFallido(pago, destino));
+            destinos.push({ ...destino, recibido: cobro.recibido, completo: cobro.completo, fallido });
         }
         const listo = destinos.every((d) => d.completo);
+        const conFalla = destinos.filter((d) => d.fallido).map((d) => d.nombre);
+        let estado = ESTADOS.ENVIADO;
+        if (listo) estado = ESTADOS.COMPLETADO;
+        else if (conFalla.length) estado = ESTADOS.FALLIDO;
         pago = store.actualizarPago(pagoId, {
-            estado: listo ? ESTADOS.COMPLETADO : ESTADOS.ENVIADO,
-            plan: { ...pago.plan, destinos }
+            estado,
+            plan: { ...pago.plan, destinos },
+            ...(conFalla.length && {
+                error: `La wallet de quien paga no pudo enviar el dinero a ${conFalla.join(', ')} (¿saldo insuficiente?)`
+            })
         });
         if (listo) for (const fn of alCompletar) await fn(resumen(pago));
     }
