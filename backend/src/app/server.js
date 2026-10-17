@@ -11,6 +11,7 @@ import { rutasSms } from './sms.js';
 import { onPagoCompletado } from './motor.js';
 import { avisarLlegada, registrar, rutasSinCuenta } from './sinCuenta.js';
 import './conexiones.js';
+import { rutasSmsReal } from './smsReal.js';
 
 const raiz = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 
@@ -18,7 +19,8 @@ dotenv.config({ path: path.join(raiz, '.env'), quiet: true });
 
 const app = express();
 
-app.use(express.json());
+// El cuerpo crudo se guarda para verificar la firma HMAC de los webhooks del gateway de SMS.
+app.use(express.json({ verify: (req, res, buf) => { req.cuerpoCrudo = buf; } }));
 app.use(express.static(path.join(raiz, 'frontend')));
 app.use(rutasQr);
 
@@ -30,6 +32,7 @@ app.get('/salud', (req, res) => {
 app.use(rutasPagos);
 app.use(rutasRetiros);
 app.use(rutasSms);
+app.use(rutasSmsReal);
 app.use(rutasSinCuenta);
 
 // Aviso de llegada (H9): SMS a quien no tiene cuenta cuando su cobro en la Custodia se confirma.

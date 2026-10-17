@@ -57,10 +57,22 @@ function guardar(celular, dir, texto) {
         .run(celular, dir, texto, new Date().toISOString());
 }
 
+// Salidas extra de cada SMS saliente (p. ej. smsReal.js lo manda a un celular de verdad).
+// No bloquean: si una falla, el SMS igual queda en la bandeja simulada.
+const salidas = [];
+
+export function alEnviar(fn) {
+    salidas.push(fn);
+}
+
 export function enviar(celular, texto) {
     const numero = normalizarCelular(celular);
     if (!numero) throw new Error(`Celular inválido: ${celular}`);
     guardar(numero, 'saliente', String(texto));
+    for (const fn of salidas) {
+        Promise.resolve().then(() => fn(numero, String(texto)))
+            .catch((error) => console.error(`SMS real a ${numero} falló:`, error.message));
+    }
 }
 
 export function bandeja(celular) {
