@@ -5,6 +5,7 @@ import express from 'express';
 import { db } from './db.js';
 import { guardarQr } from './store.js';
 import { rutasPagos } from './routes/pagos.js';
+import { rutasQr } from './qr.js';
 
 const raiz = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 
@@ -14,6 +15,7 @@ const app = express();
 
 app.use(express.json());
 app.use(express.static(path.join(raiz, 'frontend')));
+app.use(rutasQr);
 
 app.get('/salud', (req, res) => {
     const { ok } = db.prepare('SELECT 1 AS ok').get();
