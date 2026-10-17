@@ -191,12 +191,9 @@ export async function resumenReparto(id) {
     };
 }
 
-// H7: sin cuenta, se cambia de cajita (la nueva primero, para no perder ventas) y se pide el retiro con PIN.
-export async function retirar(id) {
-    const reparto = store.obtenerReparto(id);
-    if (!reparto) return { ok: false, error: 'Reparto no encontrado' };
-    if (reparto.conCuenta) return { ok: false, error: 'Tu dinero ya está en tu billetera: no hace falta retirarlo' };
-
+// Cambia de cajita: la nueva primero, para no perder ventas, y luego se completa la vieja.
+// Lo que alcance a llegar a la vieja sigue a nombre de la cédula y entra en el saldo del próximo retiro.
+async function renovarCajita(reparto) {
     const anterior = reparto.cajitaId;
     store.cambiarCajita(reparto.id, await nuevaCajita(reparto));
     try {
@@ -204,5 +201,28 @@ export async function retirar(id) {
     } catch (error) {
         console.warn(`No se pudo cerrar la cajita ${anterior}: ${error.message}`);
     }
+}
+
+// H7: sin cuenta, se cambia de cajita y se pide el retiro con PIN.
+export async function retirar(id) {
+    const reparto = store.obtenerReparto(id);
+    if (!reparto) return { ok: false, error: 'Reparto no encontrado' };
+    if (reparto.conCuenta) return { ok: false, error: 'Tu dinero ya está en tu billetera: no hace falta retirarlo' };
+
+    await renovarCajita(reparto);
     return retiros.solicitar({ cedula: reparto.cedula });
+}
+
+// Retiro pedido por cédula o celular (app o SMS RETIRAR): si la persona vende con reparto sin cuenta (P1),
+// sus cajitas también se renuevan. Solo tras un PIN emitido; P2 y P3 no tienen reparto y no cambian.
+export async function solicitarRetiro({ cedula, celular }) {
+    const resultado = await retiros.solicitar({ cedula, celular });
+    const titular = soloDigitos(cedula) || vinculos.cedulaDeCelular(celular);
+    if (resultado.ok && titular) {
+        // El PIN ya salió: si la renovación falla, el retiro sigue y la cajita vieja se renueva al vencer.
+        for (const reparto of store.repartosSinCuentaDe(titular)) {
+            await renovarCajita(reparto).catch((error) => console.warn(`No se pudo renovar la cajita del reparto ${reparto.id}: ${error.message}`));
+        }
+    }
+    return resultado;
 }

@@ -248,6 +248,11 @@ export function repartoDelQr(qrId) {
     `).get(qrId, qrId));
 }
 
+// Repartos sin cuenta de una cédula: los que tienen cajita en la Custodia.
+export function repartosSinCuentaDe(cedula) {
+    return db.prepare('SELECT * FROM repartos WHERE con_cuenta = 0 AND cedula = ? AND cajita_id IS NOT NULL').all(cedula).map(filaAReparto);
+}
+
 export function cambiarCajita(id, { cajitaId, cajitaVence }) {
     db.prepare('UPDATE repartos SET cajita_id = ?, cajita_vence = ? WHERE id = ?').run(cajitaId, cajitaVence, id);
     return obtenerReparto(id);
