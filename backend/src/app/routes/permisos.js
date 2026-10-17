@@ -7,7 +7,8 @@ export const rutasPermisos = Router();
 // Activar pagos rápidos: devuelve la URL de la pantalla de consentimiento con el tope semanal.
 rutasPermisos.post('/permisos', async (req, res) => {
     try {
-        res.json(await pagosRapidos.activar(req.body ?? {}));
+        const { clienteId, pagador, tope } = req.body ?? {};
+        res.json(await pagosRapidos.activar({ clienteId, pagador, tope }));
     } catch (error) {
         console.error('POST /permisos:', error);
         res.status(400).json({ error: mensajeParaUsuario(error, 'pago') });

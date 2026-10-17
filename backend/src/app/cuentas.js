@@ -43,6 +43,14 @@ db.exec(`
         vence TEXT NOT NULL,
         creado TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS repartos_usuario (
+        reparto_id TEXT PRIMARY KEY,
+        usuario_id TEXT NOT NULL,
+        nombre TEXT NOT NULL,
+        reglas TEXT NOT NULL,
+        creado TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS repartos_usuario_por_usuario ON repartos_usuario (usuario_id);
 `);
 
 // Error con el código HTTP que deben devolver las rutas.
@@ -255,4 +263,33 @@ export function usarEfectivo(id, cedula) {
     db.prepare("UPDATE usuarios SET tipo = 'efectivo', cedula = ?, qr_id = CASE WHEN tipo = 'efectivo' AND cedula = ? THEN qr_id END WHERE id = ?")
         .run(doc, doc, id);
     return { usuario: obtenerUsuario(id) };
+}
+
+// --- Repartos automáticos del usuario ---
+// El reparto vive en la tabla repartos (el mismo motor de la demo); aquí queda de quién es, su nombre
+// y las reglas tal como las escribió la persona (deuda, compartir, ahorro).
+
+function filaARepartoDelUsuario(fila) {
+    if (!fila) return null;
+    return { repartoId: fila.reparto_id, usuarioId: fila.usuario_id, nombre: fila.nombre, reglas: JSON.parse(fila.reglas), creado: fila.creado };
+}
+
+export function ligarReparto({ usuarioId, repartoId, nombre, reglas }) {
+    db.prepare('INSERT INTO repartos_usuario (reparto_id, usuario_id, nombre, reglas, creado) VALUES (?, ?, ?, ?, ?)')
+        .run(repartoId, usuarioId, nombre, JSON.stringify(reglas), new Date().toISOString());
+    return repartoDelUsuario(usuarioId, repartoId);
+}
+
+// Del más reciente al más viejo.
+export function repartosDelUsuario(usuarioId) {
+    return db.prepare('SELECT * FROM repartos_usuario WHERE usuario_id = ? ORDER BY creado DESC').all(usuarioId).map(filaARepartoDelUsuario);
+}
+
+// null si el reparto no existe o es de otra persona.
+export function repartoDelUsuario(usuarioId, repartoId) {
+    return filaARepartoDelUsuario(db.prepare('SELECT * FROM repartos_usuario WHERE reparto_id = ? AND usuario_id = ?').get(repartoId, usuarioId));
+}
+
+export function nombreDeReparto(repartoId) {
+    return db.prepare('SELECT nombre FROM repartos_usuario WHERE reparto_id = ?').get(repartoId)?.nombre ?? null;
 }

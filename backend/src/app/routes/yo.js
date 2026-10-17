@@ -6,10 +6,13 @@ import * as op from '../../op/index.js';
 import * as store from '../store.js';
 import * as cuentas from '../cuentas.js';
 import * as retiros from '../retiros.js';
+import * as pagosRapidos from '../pagosRapidos.js';
+import * as repartosDelUsuario from '../repartosDelUsuario.js';
 import { delExterior, registrar } from '../sinCuenta.js';
 import { crearQrTransferencia, urlDelQr } from '../qr.js';
 import { aWalletUrl } from '../wallet.js';
 import { conSesion, responderError } from './auth.js';
+import { mensajeParaUsuario } from '../errores.js';
 
 export const rutasYo = Router();
 
@@ -212,4 +215,86 @@ rutasYo.post('/yo/qr', async (req, res) => {
     } catch (error) {
         responderError(res, error);
     }
+});
+
+// --- Repartos automáticos (fase 2) ---
+
+const enlaceApp = (req) => (qrId) => urlDelQr(qrId, base(req), { app: true });
+
+// GET /yo/repartos → { repartos: [...] } del más reciente al más viejo
+rutasYo.get('/yo/repartos', async (req, res) => {
+    const cache = new Map();
+    const repartos = await Promise.all(cuentas.repartosDelUsuario(req.usuario.id)
+        .map((ligado) => repartosDelUsuario.resumen(ligado, { enlace: enlaceApp(req), cache })));
+    res.json({ repartos: repartos.filter(Boolean) });
+});
+
+// POST /yo/repartos { nombre, deuda?, compartir?, ahorro? } → { reparto }
+rutasYo.post('/yo/repartos', async (req, res) => {
+    try {
+        const id = await repartosDelUsuario.crear(req.usuario, req.body ?? {});
+        const ligado = cuentas.repartoDelUsuario(req.usuario.id, id);
+        res.json({ reparto: await repartosDelUsuario.resumen(ligado, { enlace: enlaceApp(req) }) });
+    } catch (error) {
+        responderError(res, error);
+    }
+});
+
+// POST /yo/repartos/:id/qr { monto?, detalle?, compartir? } → { qr: { id, enlace, monto, compartir } }
+rutasYo.post('/yo/repartos/:id/qr', async (req, res) => {
+    try {
+        const qr = await repartosDelUsuario.crearQr(req.usuario, req.params.id, req.body ?? {});
+        res.json({ qr: { ...qr, enlace: enlaceApp(req)(qr.id) } });
+    } catch (error) {
+        responderError(res, error);
+    }
+});
+
+// GET /yo/recibido-por-repartos → { movimientos: [{ fecha, monto, de, persona, regla, comprobante }], total }
+rutasYo.get('/yo/recibido-por-repartos', (req, res) => {
+    res.json(repartosDelUsuario.recibidoPorRepartos(req.usuario));
+});
+
+// --- Pagos con un toque: los pagos rápidos de la demo con clienteId = usuario.id y pagador = su billetera ---
+
+function conBilletera(usuario) {
+    if (usuario.tipo !== 'billetera') throw new cuentas.ErrorCuenta('Los pagos con un toque necesitan una billetera');
+}
+
+rutasYo.get('/yo/pagos-un-toque', (req, res) => {
+    res.json(pagosRapidos.estado(req.usuario.id));
+});
+
+// POST /yo/pagos-un-toque { tope } → { redirectUrl } (consentimiento del tope semanal en la billetera)
+rutasYo.post('/yo/pagos-un-toque', async (req, res) => {
+    try {
+        conBilletera(req.usuario);
+        res.json(await pagosRapidos.activar({
+            clienteId: req.usuario.id, pagador: req.usuario.wallet, tope: req.body?.tope, finishPath: '/op/finish-un-toque'
+        }));
+    } catch (error) {
+        if (error instanceof cuentas.ErrorCuenta) return responderError(res, error);
+        console.error('POST /yo/pagos-un-toque:', error);
+        res.status(400).json({ error: mensajeParaUsuario(error, 'pago') });
+    }
+});
+
+rutasYo.delete('/yo/pagos-un-toque', async (req, res) => {
+    const resultado = await pagosRapidos.cancelar(req.usuario.id);
+    if (!resultado.ok) return res.status(404).json({ error: 'No tienes pagos con un toque activos' });
+    res.json(resultado);
+});
+
+// Vuelta del consentimiento: a la app, no a la demo. Va fuera de /yo (la cookie llega igual, SameSite=Lax).
+rutasYo.get('/op/finish-un-toque', async (req, res) => {
+    const { cliente, interact_ref: interactRef, hash, result: resultado } = req.query;
+    if (!cliente) return res.status(400).send('Falta el parámetro cliente');
+    let estado;
+    try {
+        estado = await pagosRapidos.terminarActivacion({ clienteId: cliente, interactRef, hash, resultado });
+    } catch (error) {
+        console.error(error);
+        estado = 'fallido';
+    }
+    res.redirect(`/#/inicio?unToque=${encodeURIComponent(estado)}`);
 });
