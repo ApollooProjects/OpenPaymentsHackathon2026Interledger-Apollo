@@ -3,6 +3,7 @@ import { icono } from './iconos.js';
 import { nombreDestino, esc, dinero, aUnidadMinima, formatearCampoMonto, horaRestante, toast, conEspera, abrirHoja, copiar, qrSvg, enmascarar } from './ui.js';
 import { chipEstado, comprobanteHtml } from './pantallas-cuenta.js';
 import * as unToque from './un-toque.js';
+import { crearLector, leerImagen } from './lector-qr.js';
 
 const atras = (href = '#/inicio', etiqueta = 'Volver') => `<a class="icono-boton" href="${href}" aria-label="${esc(etiqueta)}">${icono('atras')}</a>`;
 const aDolarIlp = (url) => String(url ?? '').replace(/^https:\/\//, '$');
@@ -102,32 +103,34 @@ export async function cobrar({ raiz, api, usuario, vigente }) {
 }
 
 // ---------------------------------------------------------------- Pagar
+// Acepta el enlace de la app (…/#/pagar/<id>), el de la demo en vivo (…#cliente?qr=<id>), /qr/<id> o el id solo.
 const qrDeTexto = (texto) => {
     const t = String(texto ?? '').trim();
-    const m = t.match(/[?&#]qr=([\w-]+)/) ?? t.match(/\/qr\/([\w-]+)/) ?? t.match(/^([\w-]{6,})$/);
+    const m = t.match(/[#/]pagar\/([\w-]+)/) ?? t.match(/[?&#]qr=([\w-]+)/) ?? t.match(/\/qr\/([\w-]+)/) ?? t.match(/^([\w-]{4,})$/);
     return m ? m[1] : null;
 };
 
 export async function pagar(ctx, qrId) {
     if (qrId) return confirmarPago(ctx, qrId);
     const { raiz, ir } = ctx;
-    const puedeEscanear = 'BarcodeDetector' in window && navigator.mediaDevices?.getUserMedia;
+    // La cámara en vivo pide contexto seguro (https o localhost); la foto del QR sirve siempre.
+    const puedeEscanear = Boolean(navigator.mediaDevices?.getUserMedia) && window.isSecureContext;
     raiz.innerHTML = `
         <div class="encabezado">${atras()}<h1>Pagar</h1></div>
-        ${puedeEscanear ? `
-            <div class="camara" id="camara" hidden><video id="video" playsinline muted aria-label="Vista de la cámara"></video><span class="mira" aria-hidden="true"></span></div>
-            <div class="pila" id="zona-escanear">
-                <button class="boton" type="button" id="escanear">${icono('escanear')} Escanear código QR</button>
-            </div>
-            <p class="centro suave" style="margin:20px 0 12px">o</p>` : `
-            <div class="aviso info" style="margin-top:0">${icono('celular')}<p>Abre la cámara de tu celular y apunta al QR: se abrirá el pago. También puedes pegar aquí el enlace.</p></div>`}
+        <div class="camara" id="camara" hidden><video id="video" playsinline muted autoplay aria-label="Vista de la cámara"></video><span class="mira" aria-hidden="true"></span></div>
+        <div class="pila" id="zona-escanear">
+            ${puedeEscanear ? `<button class="boton" type="button" id="escanear">${icono('escanear')} Escanear código QR</button>` : ''}
+            <label class="boton ${puedeEscanear ? 'secundario' : ''}" for="foto">${icono('qr')} Leer QR desde una foto</label>
+            <input id="foto" type="file" accept="image/*" hidden>
+        </div>
+        <p class="centro suave" style="margin:20px 0 12px">o</p>
         <form id="form" novalidate style="margin-top:16px">
             <div class="campo">
                 <label for="enlace">Enlace de cobro</label>
-                <input class="entrada" id="enlace" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://…/#cliente?qr=…" aria-describedby="error">
+                <input class="entrada" id="enlace" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://…/#/pagar/…" aria-describedby="error">
                 <span class="mensaje-error" id="error" aria-live="polite"></span>
             </div>
-            <button class="boton ${puedeEscanear ? 'secundario' : ''}" type="submit">${icono('enlace')} Continuar con el enlace</button>
+            <button class="boton secundario" type="submit">${icono('enlace')} Continuar con el enlace</button>
         </form>`;
 
     raiz.querySelector('#form').addEventListener('submit', (e) => {
@@ -137,15 +140,31 @@ export async function pagar(ctx, qrId) {
         ir(`pagar/${id}`);
     });
 
+    raiz.querySelector('#foto').addEventListener('change', async (e) => {
+        const [archivo] = e.target.files;
+        e.target.value = '';
+        if (!archivo) return;
+        let texto = null;
+        try { texto = await leerImagen(archivo); } catch { /* imagen ilegible o sin lector */ }
+        const id = qrDeTexto(texto);
+        if (id) return ir(`pagar/${id}`);
+        toast(texto ? 'Ese QR no es de un cobro de La Cajita.' : 'No encontramos un QR en esa foto. Intenta con otra más nítida.', { tipo: 'error' });
+    });
+
     if (!puedeEscanear) return;
     let flujo = null;
     const parar = () => flujo?.getTracks().forEach((t) => t.stop());
     window.addEventListener('hashchange', parar, { once: true });
     raiz.querySelector('#escanear').addEventListener('click', async () => {
+        let leer;
         try {
-            flujo = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+            [flujo, leer] = await Promise.all([
+                navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }),
+                crearLector(),
+            ]);
         } catch {
-            toast('No pudimos abrir la cámara. Pega el enlace del cobro.', { tipo: 'error' });
+            parar();
+            toast('No pudimos abrir la cámara. Lee el QR desde una foto o pega el enlace del cobro.', { tipo: 'error' });
             return;
         }
         const video = raiz.querySelector('#video');
@@ -153,16 +172,18 @@ export async function pagar(ctx, qrId) {
         raiz.querySelector('#zona-escanear').innerHTML = `<button class="boton secundario" type="button" id="cancelar">Cancelar</button>`;
         raiz.querySelector('#cancelar').addEventListener('click', () => { parar(); pagar(ctx); });
         video.srcObject = flujo;
-        await video.play();
-        const detector = new window.BarcodeDetector({ formats: ['qr_code'] });
+        await video.play().catch(() => {});
+        let avisado = false;
         const buscar = async () => {
             if (!video.isConnected || !flujo.active) return;
             try {
-                const [codigo] = await detector.detect(video);
-                const id = codigo && qrDeTexto(codigo.rawValue);
+                const texto = video.readyState >= 2 ? await leer(video) : null;
+                const id = qrDeTexto(texto);
                 if (id) { parar(); navigator.vibrate?.(60); return ir(`pagar/${id}`); }
+                // Se leyó un QR, pero no es de un cobro: se avisa una vez y se sigue buscando.
+                if (texto && !avisado) { avisado = true; toast('Ese QR no es de un cobro de La Cajita.', { tipo: 'error' }); }
             } catch { /* cuadro sin QR */ }
-            requestAnimationFrame(buscar);
+            setTimeout(buscar, 150);
         };
         buscar();
     });
