@@ -13,7 +13,10 @@ process.loadEnvFile(path.join(raiz, '.env'));
 const CLAVE = 'custodia';
 const custodia = process.env.CUSTODIA_WALLET ?? 'https://ilp.interledger-test.dev/custodia-apollo';
 const corresponsal = process.env.CORRESPONSAL_WALLET ?? 'https://ilp.interledger-test.dev/corresponsal-apollo';
-const topePesos = BigInt(process.argv.find((a) => /^\d+$/.test(a)) ?? '500000');
+// Sin límite por defecto: como cada retiro es el saldo total, un tope diario dejaría sin poder retirar a quien
+// tenga más que el tope. Con un número (p. ej. 500000) se pide con tope diario en pesos.
+const topeArg = process.argv.find((a) => /^\d+$/.test(a));
+const topePesos = topeArg ? BigInt(topeArg) : null;
 const probar = process.argv.includes('--probar');
 const puerto = 3999;
 
@@ -52,8 +55,8 @@ function esperarVuelta() {
 
 async function pedirYGuardar() {
     const wallet = await op.obtenerWallet(custodia);
-    const tope = { value: (topePesos * 10n ** BigInt(wallet.assetScale)).toString() };
-    const interval = `R/${new Date().toISOString()}/P1D`;
+    const tope = topePesos ? { value: (topePesos * 10n ** BigInt(wallet.assetScale)).toString() } : null;
+    const interval = topePesos ? `R/${new Date().toISOString()}/P1D` : undefined;
     const nonce = randomUUID();
 
     const permiso = await op.pedirPermiso({
@@ -63,7 +66,9 @@ async function pedirYGuardar() {
         finishUri: `http://localhost:${puerto}/finish`,
         nonce
     });
-    console.log(`1. Permiso de retiros pedido: tope diario $${topePesos} ${wallet.assetCode}, interval ${interval}`);
+    console.log(topePesos
+        ? `1. Permiso de retiros pedido: tope diario $${topePesos} ${wallet.assetCode}, interval ${interval}`
+        : '1. Permiso de retiros pedido: sin límite de monto');
     console.log(`2. La dueña de ${custodia} debe abrir esta URL y aceptar:`);
     console.log(permiso.redirectUrl);
 

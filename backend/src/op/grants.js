@@ -14,10 +14,13 @@ export async function pedirPermiso({ walletUrl, tope, interval, finishUri, nonce
                         type: 'outgoing-payment',
                         actions: ['create', 'read'],
                         identifier: wallet.id,
-                        limits: {
-                            debitAmount: montoDeWallet(wallet, tope),
-                            ...(interval && { interval })
-                        }
+                        // Sin tope el permiso no lleva limits (Open Payments los deja opcionales): así lo pide la Custodia.
+                        ...(tope && {
+                            limits: {
+                                debitAmount: montoDeWallet(wallet, tope),
+                                ...(interval && { interval })
+                            }
+                        })
                     }
                 ]
             },
