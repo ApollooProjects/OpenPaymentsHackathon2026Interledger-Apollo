@@ -147,6 +147,8 @@ export async function resumenReparto(id) {
         conCuenta: reparto.conCuenta,
         porcentaje: reparto.porcentaje,
         saldo,
+        // Sin cuenta: el PIN que ya se pidió y todavía no se cobra (el saldo lo sigue incluyendo hasta que se entrega).
+        retiroPendiente: reparto.conCuenta ? null : retiros.retiroPendiente(reparto.cedula),
         ventas: ventas.length,
         proveedor: {
             pagado: { value: String(pagado), ...monedaProveedor },

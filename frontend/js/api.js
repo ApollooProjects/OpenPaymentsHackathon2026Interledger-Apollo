@@ -329,6 +329,13 @@ export function enviarRemesa(cuerpo) {
     return pedir('POST', '/remesas', cuerpo);
 }
 
+// Perfil de demo (mesero o proveedor): → { total: Monto | null, movimientos: [{ fecha, de, concepto, monto }],
+// deudas: [{ vendedor, pagado: Monto, deuda: Monto | null }] }
+export function obtenerCobros(wallet) {
+    if (usaMock()) return Promise.resolve({ total: null, movimientos: [], deudas: [] });
+    return pedir('GET', `/cobros?wallet=${encodeURIComponent(wallet)}`);
+}
+
 export function urlImagenQr(qrId) {
     return `/qr/${encodeURIComponent(qrId)}/imagen`;
 }

@@ -8,12 +8,15 @@ import { rutasPagos } from './routes/pagos.js';
 import { rutasRetiros } from './routes/retiros.js';
 import { rutasRepartos } from './routes/repartos.js';
 import { rutasPermisos } from './routes/permisos.js';
+import { rutasRemesas } from './routes/remesas.js';
+import { rutasCobros } from './routes/cobros.js';
 import { rutasQr } from './qr.js';
 import { rutasSms } from './sms.js';
 import { onPagoCompletado } from './motor.js';
 import { avisarLlegada, registrar, rutasSinCuenta } from './sinCuenta.js';
 import './conexiones.js';
 import { rutasSmsReal } from './smsReal.js';
+import { mensajeParaUsuario } from './errores.js';
 
 const raiz = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 
@@ -23,7 +26,11 @@ const app = express();
 
 // El cuerpo crudo se guarda para verificar la firma HMAC de los webhooks del gateway de SMS.
 app.use(express.json({ verify: (req, res, buf) => { req.cuerpoCrudo = buf; } }));
-app.use(express.static(path.join(raiz, 'frontend')));
+// no-cache: el navegador (y Cloudflare) revalidan con el ETag en cada carga, así nadie se queda con JS viejo
+// después de un despliegue; si el archivo no cambió, la respuesta es un 304 sin cuerpo.
+app.use(express.static(path.join(raiz, 'frontend'), {
+    setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache')
+}));
 app.use(rutasQr);
 
 app.get('/salud', (req, res) => {
@@ -35,6 +42,8 @@ app.use(rutasPagos);
 app.use(rutasRetiros);
 app.use(rutasRepartos);
 app.use(rutasPermisos);
+app.use(rutasRemesas);
+app.use(rutasCobros);
 app.use(rutasSms);
 app.use(rutasSmsReal);
 app.use(rutasSinCuenta);
@@ -44,7 +53,7 @@ onPagoCompletado(avisarLlegada);
 
 app.use((error, req, res, next) => {
     console.error(error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: mensajeParaUsuario(error) });
 });
 
 if (process.env.DEMO_VENDEDOR_WALLET) {

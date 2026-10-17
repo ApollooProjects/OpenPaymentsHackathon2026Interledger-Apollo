@@ -1,6 +1,7 @@
 import { randomBytes, randomInt, randomUUID, scryptSync, timingSafeEqual } from 'node:crypto';
 import * as op from '../op/index.js';
 import * as store from './store.js';
+import { mensajeParaUsuario } from './errores.js';
 
 const VIGENCIA_MS = 24 * 60 * 60 * 1000;
 const PERMISO_CUSTODIA = 'custodia';
@@ -31,6 +32,22 @@ function pinCorrecto(pin, retiro) {
     return intento.length === guardado.length && timingSafeEqual(intento, guardado);
 }
 
+// "el sáb., 18 de oct. a las 11:55 p. m." en hora de Colombia.
+export function horaLocal(iso) {
+    const fecha = new Date(iso);
+    const dia = fecha.toLocaleDateString('es-CO', { timeZone: 'America/Bogota', weekday: 'short', day: 'numeric', month: 'short' });
+    const hora = fecha.toLocaleTimeString('es-CO', { timeZone: 'America/Bogota', hour: 'numeric', minute: '2-digit' });
+    return `el ${dia} a las ${hora}`;
+}
+
+// PIN vigente de esa cédula (para avisarle cuando llega más dinero y para el panel del vendedor).
+export function retiroPendiente(cedula) {
+    const activo = store.retirosDe(soloDigitos(cedula))
+        .filter((r) => r.estado === 'activo' && new Date(r.vence) > new Date())
+        .pop();
+    return activo ? { monto: activo.monto, vence: activo.vence } : null;
+}
+
 export function formatear(monto) {
     return new Intl.NumberFormat('es-CO', {
         style: 'currency',
@@ -45,14 +62,21 @@ async function identificar({ cedula, celular }) {
     const buscada = soloDigitos(cedula);
     const celularBuscado = soloDigitos(celular);
     const cobros = await op.listarCobros({ walletUrl: custodia });
-    const propios = cobros.filter((cobro) => {
+    let propios = cobros.filter((cobro) => {
         const meta = cobro.metadata ?? {};
         if (buscada) return soloDigitos(meta.cedula) === buscada;
         return celularBuscado && soloDigitos(meta.celular) === celularBuscado;
     });
     if (propios.length === 0) return null;
+    // Por SMS solo se conoce el celular, y un celular puede tener cobros de varias cédulas:
+    // se usa la cédula del cobro más reciente y solo sus cobros, para no sumar dinero de otra persona.
+    if (!buscada) {
+        const reciente = propios.reduce((a, b) => (String(b.creado ?? '') > String(a.creado ?? '') ? b : a));
+        const elegida = soloDigitos(reciente.metadata?.cedula);
+        propios = cobros.filter((cobro) => soloDigitos(cobro.metadata?.cedula) === elegida);
+    }
     const meta = propios.find((c) => c.metadata?.celular)?.metadata ?? propios[0].metadata;
-    return { cedula: soloDigitos(meta.cedula), celular: meta.celular ?? celular ?? null, cobros: propios };
+    return { cedula: soloDigitos(meta.cedula), celular: celularBuscado || meta.celular || null, cobros: propios };
 }
 
 // Lo retirado se cuenta en el testnet (cobros del Corresponsal con esa cédula), igual que lo recibido en la Custodia:
@@ -84,18 +108,28 @@ export async function saldo({ cedula, celular }) {
     return { ok: true, cedula: persona.cedula, saldo: await calcularSaldo(persona) };
 }
 
-export async function solicitar({ cedula, celular }) {
+// Las solicitudes van en fila: dos RETIRAR casi al mismo tiempo (botón + SMS) no pueden dejar dos PIN activos.
+let fila = Promise.resolve();
+
+export function solicitar(datos) {
+    const turno = fila.then(() => solicitarAhora(datos));
+    fila = turno.catch(() => {});
+    return turno;
+}
+
+async function solicitarAhora({ cedula, celular }) {
     const persona = await identificar({ cedula, celular });
     if (!persona) return { ok: false, error: 'No hay dinero a tu nombre' };
 
     // Un PIN nuevo reemplaza al anterior que no se haya usado: siempre se retira el saldo total.
+    let reemplazo = false;
     for (const anterior of store.retirosDe(persona.cedula)) {
-        if (anterior.estado === 'activo') store.cambiarEstadoRetiro(anterior.id, 'activo', 'anulado');
+        if (anterior.estado === 'activo' && store.cambiarEstadoRetiro(anterior.id, 'activo', 'anulado')) reemplazo = true;
     }
 
     const monto = await calcularSaldo(persona);
     if (BigInt(monto.value) === 0n) {
-        await enviarSms(persona.celular, 'No tienes saldo para retirar.');
+        await enviarSms(persona.celular, 'La Cajita: no tienes saldo para retirar. Te avisaremos por SMS cuando te llegue dinero.');
         return { ok: false, error: 'No tienes saldo para retirar' };
     }
 
@@ -126,7 +160,9 @@ export async function solicitar({ cedula, celular }) {
 
     await enviarSms(
         persona.celular,
-        `Retira ${formatear(monto)} en cualquier corresponsal con el PIN ${pin} y tu cédula. Vence en 24 h.`
+        // .replace: la hora termina en "p. m." y no debe quedar ".." antes de la frase siguiente.
+        `La Cajita: retira ${formatear(monto)} (todo tu saldo) en cualquier corresponsal con el PIN ${pin} y tu cédula `
+            + `(termina en ${persona.cedula.slice(-4)}). Vence ${horaLocal(vence)}.${reemplazo ? ' Tu PIN anterior ya no sirve.' : ''}`.replace('..', '.')
     );
     return { ok: true, retiroId, monto, vence };
 }
@@ -159,16 +195,28 @@ async function esperarEntrega(retiro) {
     return 'pagando';
 }
 
+const YA_NO_SIRVE = {
+    vencido: 'Este PIN venció. Tu dinero sigue a tu nombre: responde RETIRAR por SMS para pedir uno nuevo',
+    anulado: 'Este PIN se reemplazó por uno más reciente: usa el último PIN que te llegó por SMS',
+    entregado: 'Este PIN ya se usó: el dinero ya se entregó'
+};
+
 export async function validar({ pin, cedula }) {
-    const retiro = store.retirosDe(soloDigitos(cedula))
-        .filter((r) => r.estado === 'activo' || r.estado === 'pagando')
-        .find((r) => pinCorrecto(pin, r));
+    const retiro = store.retirosDe(soloDigitos(cedula)).find((r) => pinCorrecto(pin, r));
     if (!retiro) return { ok: false, error: 'PIN o cédula incorrectos' };
+    if (YA_NO_SIRVE[retiro.estado]) return { ok: false, error: YA_NO_SIRVE[retiro.estado] };
 
     if (retiro.estado === 'activo') {
         if (new Date(retiro.vence) < new Date()) {
             store.cambiarEstadoRetiro(retiro.id, 'activo', 'vencido');
-            return { ok: false, error: 'El PIN venció. Responde RETIRAR por SMS para pedir uno nuevo' };
+            return { ok: false, error: YA_NO_SIRVE.vencido };
+        }
+        // El saldo se revisa otra vez: un PIN nunca puede sacar más de lo que hay a nombre de esa cédula.
+        const persona = await identificar({ cedula: retiro.cedula });
+        const disponible = persona ? BigInt((await calcularSaldo(persona)).value) : 0n;
+        if (disponible < BigInt(retiro.monto.value)) {
+            store.cambiarEstadoRetiro(retiro.id, 'activo', 'anulado');
+            return { ok: false, error: 'Este PIN ya no es válido: responde RETIRAR por SMS para pedir uno nuevo' };
         }
         if (!store.cambiarEstadoRetiro(retiro.id, 'activo', 'pagando')) {
             return { ok: false, error: 'Este retiro ya se está procesando' };
@@ -178,16 +226,25 @@ export async function validar({ pin, cedula }) {
             const { id } = await pagarConPermiso({ custodia, retiro });
             store.cambiarEstadoRetiro(retiro.id, 'pagando', 'pagando', { pagoOpId: id });
         } catch (error) {
+            console.error(`Retiro ${retiro.id}:`, error);
             store.cambiarEstadoRetiro(retiro.id, 'pagando', 'activo', { error: error.message });
-            return { ok: false, error: `No se pudo pagar el retiro: ${error.message}` };
+            return { ok: false, error: mensajeParaUsuario(error, 'retiro') };
         }
     }
 
-    const resultado = await esperarEntrega(store.obtenerRetiro(retiro.id));
+    const actual = store.obtenerRetiro(retiro.id);
+    const resultado = await esperarEntrega(actual);
     if (resultado === 'entregado') {
         store.cambiarEstadoRetiro(retiro.id, 'pagando', 'entregado');
-        await enviarSms(retiro.celular, `Retiraste ${formatear(retiro.monto)}. Gracias por usar La Cajita.`);
-        return { ok: true, estado: 'entregado', monto: retiro.monto };
+        await enviarSms(retiro.celular, `La Cajita: retiraste ${formatear(retiro.monto)} en efectivo. Gracias por usar La Cajita.`);
+        // Comprobante para el cajero: el pago real de Open Payments Custodia → Corresponsal.
+        return {
+            ok: true,
+            estado: 'entregado',
+            monto: retiro.monto,
+            incomingPayment: actual.cobroId,
+            outgoingPayment: actual.pagoOpId ?? null
+        };
     }
     if (resultado === 'fallido') {
         store.cambiarEstadoRetiro(retiro.id, 'pagando', 'activo', { error: 'La Custodia no pudo pagar el retiro' });

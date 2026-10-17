@@ -11,13 +11,13 @@ retiros.usarSms(async (celular, texto) => {
 sms.usarManejadores({
     saldo: async ({ celular }) => {
         const resultado = await retiros.saldo({ celular });
-        if (!resultado.ok) return 'Todavía no tienes dinero a tu nombre.';
-        if (BigInt(resultado.saldo.value) === 0n) return 'Tienes $ 0 disponibles. Te avisaremos por SMS cuando te llegue dinero.';
-        return `Tienes ${retiros.formatear(resultado.saldo)} disponibles. Responde RETIRAR para sacarlo en efectivo.`;
+        if (!resultado.ok) return 'La Cajita: todavía no tienes dinero a tu nombre. Te avisaremos por SMS cuando te llegue.';
+        if (BigInt(resultado.saldo.value) === 0n) return 'La Cajita: tienes $ 0 disponibles. Te avisaremos por SMS cuando te llegue dinero.';
+        return `La Cajita: tienes ${retiros.formatear(resultado.saldo)} disponibles. Responde RETIRAR para sacarlo en efectivo.`;
     },
     // solicitar() ya manda por SMS el PIN o el aviso de "sin saldo"; aquí solo falta el caso de quien no tiene dinero.
     retirar: async ({ celular }) => {
         const resultado = await retiros.solicitar({ celular });
-        if (!resultado.ok && resultado.error === 'No hay dinero a tu nombre') return 'Todavía no tienes dinero a tu nombre.';
+        if (!resultado.ok && resultado.error === 'No hay dinero a tu nombre') return 'La Cajita: todavía no tienes dinero a tu nombre. Te avisaremos por SMS cuando te llegue.';
     }
 });

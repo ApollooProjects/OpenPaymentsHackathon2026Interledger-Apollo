@@ -9,6 +9,7 @@ import { Router } from 'express';
 import { db } from './db.js';
 import * as store from './store.js';
 import * as sms from './sms.js';
+import * as retiros from './retiros.js';
 
 db.exec(`
     CREATE TABLE IF NOT EXISTS personas_sin_cuenta (
@@ -78,25 +79,34 @@ function formatear(monto) {
 export async function avisarLlegada(resumen) {
     const pago = store.obtenerPago(resumen.pagoId);
     if (!pago) return;
-    pago.plan.destinos.forEach((destino, indice) => {
+    for (const [indice, destino] of pago.plan.destinos.entries()) {
         const celular = destino.metadata?.celular;
-        if (!celular || !destino.completo) return;
+        if (!celular || !destino.completo) continue;
         const { changes } = db.prepare('INSERT OR IGNORE INTO avisos_llegada (pago_id, destino, enviado) VALUES (?, ?, ?)')
             .run(pago.id, indice, new Date().toISOString());
-        if (changes === 0) return;
+        if (changes === 0) continue;
         const recibido = destino.recibido ?? destino.monto;
-        sms.enviar(celular, pago.plan.origen?.tipo === 'remesa'
-            ? textoRemesa(recibido, destino.metadata?.remitente ?? pago.plan.origen?.nombreRemitente)
-            : `La Cajita: te llegaron ${formatear(recibido)} por un pago con QR. `
-                + 'Escribe SALDO para ver cuánto tienes o RETIRAR para sacarlo en efectivo.');
-    });
+        const cedula = destino.metadata?.cedula;
+        // H9: el aviso trae el saldo total. Si no se puede leer en este momento, sale sin él.
+        const saldo = cedula ? await retiros.saldo({ cedula }).then((r) => (r.ok ? r.saldo : null)).catch(() => null) : null;
+        const pendiente = cedula ? retiros.retiroPendiente(cedula) : null;
+        let texto = pago.plan.origen?.tipo === 'remesa'
+            ? textoRemesa(recibido, destino.metadata?.remitente ?? pago.plan.origen?.nombreRemitente, saldo)
+            : `La Cajita: te llegaron ${formatear(recibido)} por un pago con QR.${saldo ? ` Saldo: ${formatear(saldo)}.` : ''} `
+                + 'Responde RETIRAR para sacarlo en efectivo o SALDO para ver cuánto tienes.';
+        if (pendiente) {
+            texto += ` Ya tienes un PIN activo por ${formatear(pendiente.monto)}: si respondes RETIRAR te damos uno nuevo por el total.`;
+        }
+        sms.enviar(celular, texto);
+    }
 }
 
 // H11: "Te llegaron $200.000 de Carlos (desde el exterior). Responde RETIRAR para recibir tu PIN de retiro."
 // Si llegan varias remesas antes de retirar, SALDO y RETIRAR ya las suman (todas quedan en la Custodia con la cédula).
-export function textoRemesa(recibido, remitente) {
+export function textoRemesa(recibido, remitente, saldo = null) {
     const de = remitente ? ` de ${remitente}` : '';
-    return `La Cajita: te llegaron ${formatear(recibido)}${de} desde el exterior. `
+    const total = saldo && saldo.value !== recibido.value ? ` Saldo: ${formatear(saldo)}.` : '';
+    return `La Cajita: te llegaron ${formatear(recibido)}${de} desde el exterior.${total} `
         + 'Responde RETIRAR para recibir tu PIN de retiro o SALDO para ver cuánto tienes.';
 }
 

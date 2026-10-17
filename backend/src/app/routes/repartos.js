@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import * as repartos from '../repartos.js';
+import { mensajeParaUsuario } from '../errores.js';
 
 export const rutasRepartos = Router();
 
@@ -7,7 +8,8 @@ rutasRepartos.post('/repartos', async (req, res) => {
     try {
         res.json(await repartos.crearReparto(req.body ?? {}));
     } catch (error) {
-        res.status(400).json({ error: error.message });
+        console.error('POST /repartos:', error);
+        res.status(400).json({ error: mensajeParaUsuario(error, 'reparto') });
     }
 });
 

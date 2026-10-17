@@ -2,6 +2,7 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import * as op from '../op/index.js';
 import * as store from './store.js';
 import * as pagosRapidos from './pagosRapidos.js';
+import { mensajeParaUsuario } from './errores.js';
 
 export const ESTADOS = {
     ESPERANDO: 'esperando_consentimiento',
@@ -45,7 +46,10 @@ export async function iniciarPago(plan) {
         destinos.push({ ...destino, walletUrl: wallet.id, monto, cobroId, compartido: Boolean(destino.cobroId) });
     }
 
-    const tope = { value: sumar(destinos).toString(), assetCode: pagador.assetCode, assetScale: pagador.assetScale };
+    const total = plan.cotizar
+        ? destinos.reduce((suma, destino) => suma + BigInt(destino.debito.value), 0n)
+        : sumar(destinos);
+    const tope = { value: total.toString(), assetCode: pagador.assetCode, assetScale: pagador.assetScale };
 
     // Pagos rápidos (H5c): con permiso vigente y tope suficiente, la compra sale sin pantalla de consentimiento.
     const rapido = pagosRapidos.permisoUsable(plan.clienteId, pagador.id, tope.value);
@@ -90,7 +94,9 @@ async function pagarDestinos(pago, token, renovar) {
         try {
             // Un cobro compartido (cajita, deuda del proveedor) recibe de muchas ventas: se anota cuánto tenía antes.
             const recibidoAntes = destino.compartido ? (await op.consultarCobro(destino.cobroId)).recibido.value : undefined;
-            const pagarCon = (t) => op.pagar({ walletUrl: pago.pagador, token: t, cobroId: destino.cobroId, monto: destino.monto });
+            const pagarCon = (t) => (destino.quoteId
+                ? op.pagarConCotizacion({ walletUrl: pago.pagador, token: t, quoteId: destino.quoteId })
+                : op.pagar({ walletUrl: pago.pagador, token: t, cobroId: destino.cobroId, monto: destino.monto }));
             let saliente;
             try {
                 saliente = await pagarCon(token);
@@ -126,7 +132,8 @@ async function pagarConPermisoGuardado(pagoId, rapido) {
         return true;
     } catch (error) {
         if (error.pagados === 0) return false;
-        store.actualizarPago(pagoId, { estado: ESTADOS.FALLIDO, error: error.message });
+        console.error(`Pago rápido ${pagoId}:`, error);
+        store.actualizarPago(pagoId, { estado: ESTADOS.FALLIDO, error: mensajeParaUsuario(error, 'pago') });
         return true;
     }
 }
@@ -137,7 +144,7 @@ export async function terminarPago({ pagoId, interactRef, hash, resultado }) {
     if (pago.estado !== ESTADOS.ESPERANDO) return resumen(pago);
 
     if (!interactRef) {
-        const error = resultado === 'grant_rejected' ? 'El cliente rechazó el pago' : 'La wallet no devolvió interact_ref';
+        const error = resultado === 'grant_rejected' ? 'Rechazaste el pago en tu wallet' : 'La wallet no confirmó el pago';
         return resumen(store.actualizarPago(pagoId, { estado: ESTADOS.RECHAZADO, error }));
     }
 
@@ -150,7 +157,7 @@ export async function terminarPago({ pagoId, interactRef, hash, resultado }) {
         hash
     });
     if (!hashValido) {
-        return resumen(store.actualizarPago(pagoId, { estado: ESTADOS.FALLIDO, error: 'El hash de la redirección no es válido' }));
+        return resumen(store.actualizarPago(pagoId, { estado: ESTADOS.FALLIDO, error: 'No pudimos verificar la respuesta de la wallet. Intenta de nuevo' }));
     }
 
     store.actualizarPago(pagoId, { estado: ESTADOS.PROCESANDO });
@@ -166,7 +173,8 @@ export async function terminarPago({ pagoId, interactRef, hash, resultado }) {
         const { destinos } = await pagarDestinos(pago, token);
         store.actualizarPago(pagoId, { estado: ESTADOS.ENVIADO, plan: { ...pago.plan, destinos } });
     } catch (error) {
-        return resumen(store.actualizarPago(pagoId, { estado: ESTADOS.FALLIDO, error: error.message }));
+        console.error(`Pago ${pagoId}:`, error);
+        return resumen(store.actualizarPago(pagoId, { estado: ESTADOS.FALLIDO, error: mensajeParaUsuario(error, 'pago') }));
     }
 
     return resumen(await confirmar(pagoId, { intentos: 5 }));
@@ -219,7 +227,20 @@ export function resumen(pago) {
         pagoId: pago.id,
         estado: pago.estado,
         total: pago.plan.tope,
-        destinos: pago.plan.destinos.map((d) => ({ nombre: d.nombre, monto: d.monto, completo: d.completo ?? false })),
+        // Prueba visible de Open Payments para el recibo: wallets, incoming payment de cada parte y outgoing que la pagó.
+        pagador: pago.pagador ?? null,
+        metodo: pago.plan.metodo ?? null,
+        creado: pago.creado ?? null,
+        destinos: pago.plan.destinos.map((d) => ({
+            nombre: d.nombre,
+            monto: d.monto,
+            completo: d.completo ?? false,
+            fallido: d.fallido ?? false,
+            walletUrl: d.walletUrl ?? null,
+            incomingPayment: d.cobroId ?? null,
+            outgoingPayment: d.pagoOpId ?? null,
+            quoteId: d.quoteId ?? null
+        })),
         origen: pago.plan.origen ?? null,
         error: pago.error ?? null
     };
