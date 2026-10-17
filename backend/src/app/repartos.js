@@ -118,18 +118,19 @@ export async function destinosDeVenta(reparto, { monto, propina, meseros = [] })
     });
     const wallets = meseros.map((m) => (typeof m === 'string' ? m : m.wallet));
 
+    // El rol queda guardado en el pago: una misma wallet puede ser, por ejemplo, ahorro y mesero a la vez.
     return partes.map(({ destino, valor }) => {
         const parte = { value: String(valor) };
         if (destino === 'proveedor') {
-            return { nombre: 'Proveedor', walletUrl: reparto.proveedorWallet, monto: parte, ...(reparto.deudaCobroId && { cobroId: reparto.deudaCobroId }) };
+            return { rol: 'proveedor', nombre: 'Proveedor', walletUrl: reparto.proveedorWallet, monto: parte, ...(reparto.deudaCobroId && { cobroId: reparto.deudaCobroId }) };
         }
         if (destino === 'vendedor') {
             return reparto.conCuenta
-                ? { nombre: reparto.vendedor, walletUrl: reparto.vendedorWallet, monto: parte }
-                : { nombre: reparto.vendedor, walletUrl: custodia(), monto: parte, cobroId: reparto.cajitaId };
+                ? { rol: 'vendedor', nombre: reparto.vendedor, walletUrl: reparto.vendedorWallet, monto: parte }
+                : { rol: 'vendedor', nombre: reparto.vendedor, walletUrl: custodia(), monto: parte, cobroId: reparto.cajitaId };
         }
-        if (destino === 'ahorro') return { nombre: 'Ahorro', walletUrl: reparto.ahorroWallet, monto: parte };
-        return { nombre: `Mesero ${wallets.indexOf(destino) + 1}`, walletUrl: destino, monto: parte };
+        if (destino === 'ahorro') return { rol: 'ahorro', nombre: 'Ahorro', walletUrl: reparto.ahorroWallet, monto: parte };
+        return { rol: 'mesero', nombre: `Mesero ${wallets.indexOf(destino) + 1}`, walletUrl: destino, monto: parte };
     });
 }
 
@@ -143,13 +144,15 @@ export async function resumenReparto(id) {
     if (!reparto) return null;
 
     const ventas = store.pagosDelReparto(reparto.id).filter((pago) => pago.estado === 'completado');
-    const parteDe = (pago, walletUrl) => pago.plan.destinos
-        .filter((d) => d.walletUrl === walletUrl)
+    // Ventas anteriores a C5 no guardaban el rol: se deduce del nombre, que es fijo para cada rol.
+    const rolDe = (d) => d.rol ?? (d.nombre === 'Proveedor' ? 'proveedor' : d.nombre === 'Ahorro' ? 'ahorro' : d.nombre === reparto.vendedor ? 'vendedor' : 'mesero');
+    const parteDe = (pago, rol) => pago.plan.destinos
+        .filter((d) => rolDe(d) === rol)
         .reduce((t, d) => t + BigInt(d.monto.value), 0n);
 
     let saldo;
     if (reparto.conCuenta) {
-        const total = ventas.reduce((t, pago) => t + parteDe(pago, reparto.vendedorWallet), 0n);
+        const total = ventas.reduce((t, pago) => t + parteDe(pago, 'vendedor'), 0n);
         saldo = { value: total.toString(), ...(await moneda(reparto.vendedorWallet)) };
     } else {
         saldo = (await retiros.saldo({ cedula: reparto.cedula })).saldo ?? { value: '0', ...(await moneda(custodia())) };
@@ -160,7 +163,7 @@ export async function resumenReparto(id) {
     if (reparto.deudaCobroId) {
         pagado = (await op.consultarCobro(reparto.deudaCobroId)).recibido.value;
     } else {
-        pagado = ventas.reduce((t, pago) => t + parteDe(pago, reparto.proveedorWallet), 0n).toString();
+        pagado = ventas.reduce((t, pago) => t + parteDe(pago, 'proveedor'), 0n).toString();
     }
 
     return {
@@ -177,7 +180,7 @@ export async function resumenReparto(id) {
             ? {
                 porcentaje: reparto.ahorroPorcentaje,
                 wallet: reparto.ahorroWallet,
-                acumulado: { value: ventas.reduce((t, pago) => t + parteDe(pago, reparto.ahorroWallet), 0n).toString(), ...(await moneda(reparto.ahorroWallet)) }
+                acumulado: { value: ventas.reduce((t, pago) => t + parteDe(pago, 'ahorro'), 0n).toString(), ...(await moneda(reparto.ahorroWallet)) }
             }
             : null,
         proveedor: {
