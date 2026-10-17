@@ -3,7 +3,11 @@ import { randomUUID } from 'node:crypto';
 
 const BASE = 'https://mock.interledger-test.dev';
 const MONEDA = { assetCode: 'COP', assetScale: 2 };
+const EUR = { assetCode: 'EUR', assetScale: 2 };
 const cobros = new Map();
+
+// Como en la demo, las wallets "remitente" están en EUR; las demás en COP.
+const monedaDe = (walletUrl) => (String(walletUrl).includes('remitente') ? EUR : MONEDA);
 
 export async function obtenerWallet(walletUrl) {
     return {
@@ -11,8 +15,47 @@ export async function obtenerWallet(walletUrl) {
         publicName: walletUrl.split('/').pop(),
         authServer: `${BASE}/auth`,
         resourceServer: `${BASE}/resources`,
-        ...MONEDA
+        ...monedaDe(walletUrl)
     };
+}
+
+// Tasa de prueba: 1 EUR = 4.500 COP, menos 1 % de comisión (ambas monedas con assetScale 2).
+const COP_POR_EUR = 4500n;
+const quotes = new Map();
+
+export async function cotizar({ walletUrl, cobroId, debito }) {
+    const cobro = cobros.get(cobroId);
+    if (!cobro) throw new Error(`[mock] cobro no encontrado: ${cobroId}`);
+    const origen = monedaDe(walletUrl);
+    const tasa = origen.assetCode === 'EUR' ? COP_POR_EUR : 1n;
+    let debitado;
+    let recibido;
+    if (debito) {
+        debitado = BigInt(debito.value);
+        recibido = (debitado * tasa * 99n) / 100n;
+    } else {
+        if (cobro.esperado === null) throw new Error('[mock] sin debito, el cobro necesita monto fijo');
+        recibido = BigInt(cobro.esperado) - cobro.recibido;
+        debitado = (recibido * 100n + tasa * 99n - 1n) / (tasa * 99n);
+    }
+    const quoteId = `${BASE}/quotes/${randomUUID()}`;
+    quotes.set(quoteId, { cobroId, recibido });
+    return {
+        quoteId,
+        debito: { value: debitado.toString(), ...origen },
+        recibe: { value: recibido.toString(), ...MONEDA },
+        vence: new Date(Date.now() + 5 * 60 * 1000).toISOString()
+    };
+}
+
+export async function pagarConCotizacion({ walletUrl, token, quoteId }) {
+    const quote = quotes.get(quoteId);
+    if (!quote) throw new Error(`[mock] quote no encontrada: ${quoteId}`);
+    if (!token) throw new Error('[mock] falta el token del permiso');
+    const cobro = cobros.get(quote.cobroId);
+    cobro.recibido += quote.recibido;
+    if (cobro.esperado !== null && cobro.recibido >= BigInt(cobro.esperado)) cobro.completo = true;
+    return { id: `${BASE}/outgoing-payments/${randomUUID()}` };
 }
 
 export async function crearCobro({ walletUrl, monto, metadata = {}, expiresAt } = {}) {
