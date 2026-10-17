@@ -256,6 +256,19 @@ export function pagosDelReparto(repartoId) {
     `).all(repartoId, repartoId).map(filaAPago);
 }
 
+// Pagos con al menos un destino en esa wallet (perfil de demo: lo que ha recibido un mesero o un proveedor).
+export function pagosHacia(walletUrl) {
+    return db.prepare(`
+        SELECT p.* FROM pagos p
+        WHERE EXISTS (SELECT 1 FROM json_each(p.plan, '$.destinos') d WHERE json_extract(d.value, '$.walletUrl') = ?)
+        ORDER BY p.creado DESC
+    `).all(walletUrl).map(filaAPago);
+}
+
+export function repartosDelProveedor(walletUrl) {
+    return db.prepare('SELECT * FROM repartos WHERE proveedor_wallet = ? ORDER BY creado DESC').all(walletUrl).map(filaAReparto);
+}
+
 // datos: lo que pide el grant según su estado (pendiente: nonces y continuación; activo: token, manageUrl, continuación).
 export function guardarPagosRapidos({ clienteId, wallet, tope, inicio, estado, datos }) {
     db.prepare(`
