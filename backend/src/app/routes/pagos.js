@@ -2,7 +2,7 @@ import { Router } from 'express';
 import * as store from '../store.js';
 import * as motor from '../motor.js';
 import * as op from '../../op/index.js';
-import { destinoDelQr } from '../sinCuenta.js';
+import { destinoDelQr, personaDelQr } from '../sinCuenta.js';
 import { destinosDeVenta, repartoDelQr } from '../repartos.js';
 import { qrUsado } from '../qr.js';
 import { mensajeParaUsuario } from '../errores.js';
@@ -37,6 +37,9 @@ async function qrPublico(qr) {
         vigenteHasta: qr.vigenteHasta,
         propina: qr.propina,
         descripcion: qr.descripcion,
+        // Para que quien paga sepa si el dinero llega a una cuenta o queda para retirar en efectivo.
+        destino: personaDelQr(qr.id) ? 'efectivo' : 'cuenta',
+        walletDestino: qr.tipo === 'transferencia' ? qr.walletUrl : null,
         usado: qrUsado(qr)
     };
 }

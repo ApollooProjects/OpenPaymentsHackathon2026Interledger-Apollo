@@ -72,6 +72,40 @@ export async function crearQrPersonalizado({ repartoId, monto, descripcion, mese
     return { qrId };
 }
 
+// QR de transferencia a cuenta: quien lo escanea paga directo a la wallet de quien cobra (un outgoing a un
+// incoming payment en esa wallet), sin reparto, sin Custodia y sin SMS. Monto opcional en la moneda de esa wallet.
+export async function crearQrTransferencia({ nombre, wallet, monto, concepto } = {}) {
+    const limpio = String(wallet ?? '').trim().replace(/^\$/, 'https://');
+    if (!limpio.startsWith('https://')) throw new Error('La dirección de tu billetera debe empezar por https:// o por $');
+    let datos;
+    try {
+        datos = await op.obtenerWallet(limpio);
+    } catch {
+        throw new Error(`No encontramos la billetera ${limpio}`);
+    }
+
+    let valor = null;
+    if (monto !== undefined && monto !== null && monto !== '') {
+        valor = valorEntero(monto);
+        if (!valor) throw new Error('El monto debe ser un entero positivo en centavos');
+        if (typeof monto === 'object' && monto.assetScale !== undefined && Number(monto.assetScale) !== datos.assetScale) {
+            throw new Error(`El monto debe venir con escala ${datos.assetScale} (${datos.assetCode})`);
+        }
+    }
+
+    const quien = String(nombre ?? '').trim() || datos.publicName || limpio.split('/').pop();
+    const qrId = `t-${randomUUID().slice(0, 8)}`;
+    store.guardarQr({
+        id: qrId,
+        vendedor: quien,
+        walletUrl: datos.id ?? limpio,
+        tipo: 'transferencia',
+        monto: valor,
+        descripcion: String(concepto ?? '').trim() || null
+    });
+    return { qrId, nombre: quien, monto: valor ? { value: valor, assetCode: datos.assetCode, assetScale: datos.assetScale } : null };
+}
+
 // Un QR con monto sirve para un solo pago: queda usado cuando un pago suyo se completó o está en curso.
 export function qrUsado(qr) {
     if (!qr.monto) return false;
@@ -85,6 +119,16 @@ rutasQr.post('/qr', async (req, res) => {
     try {
         const { qrId } = await crearQrPersonalizado(req.body ?? {});
         res.json({ qrId, url: urlDelQr(qrId, `${req.protocol}://${req.get('host')}`) });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// POST /qr/transferencia { nombre?, wallet, monto?, concepto? } → { qrId, url, nombre, monto, destino: 'cuenta' }
+rutasQr.post('/qr/transferencia', async (req, res) => {
+    try {
+        const qr = await crearQrTransferencia(req.body ?? {});
+        res.json({ ...qr, url: urlDelQr(qr.qrId, `${req.protocol}://${req.get('host')}`), destino: 'cuenta' });
     } catch (error) {
         res.status(400).json({ error: error.message });
     }

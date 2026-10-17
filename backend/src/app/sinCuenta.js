@@ -5,8 +5,10 @@
 //   registrar({ qrId, nombre, cedula, celular }) → QR cuyo dinero va a la Custodia
 //   destinoDelQr(qr, monto)                      → destino del plan de pago (Custodia + metadata o wallet propia)
 //   avisarLlegada(resumen)                       → se engancha en motor.onPagoCompletado: SMS "te llegó"
+import { randomUUID } from 'node:crypto';
 import { Router } from 'express';
 import { db } from './db.js';
+import * as op from '../op/index.js';
 import * as store from './store.js';
 import * as sms from './sms.js';
 import * as retiros from './retiros.js';
@@ -36,7 +38,8 @@ function custodia() {
     return wallet.replace(/^\$/, 'https://');
 }
 
-export function registrar({ qrId, nombre, cedula, celular }) {
+// tipo, monto y descripcion son para el QR de transferencia a efectivo; sin ellos queda el QR estático de P2.
+export function registrar({ qrId, nombre, cedula, celular, tipo, monto = null, descripcion = null }) {
     const numero = sms.normalizarCelular(celular);
     if (!numero) throw new Error('Celular inválido');
     if (!soloDigitos(cedula)) throw new Error('Cédula inválida');
@@ -48,7 +51,7 @@ export function registrar({ qrId, nombre, cedula, celular }) {
         ON CONFLICT(qr_id) DO UPDATE SET nombre = excluded.nombre, cedula = excluded.cedula, celular = excluded.celular
     `).run(qrId, nombre.trim(), soloDigitos(cedula), numero, new Date().toISOString());
 
-    store.guardarQr({ id: qrId, vendedor: nombre.trim(), walletUrl: custodia() });
+    store.guardarQr({ id: qrId, vendedor: nombre.trim(), walletUrl: custodia(), tipo, monto, descripcion });
     return { qrId, nombre: nombre.trim(), cedula: soloDigitos(cedula), celular: numero };
 }
 
@@ -114,13 +117,36 @@ export function textoRemesa(recibido, remitente, saldo = null) {
 
 export const rutasSinCuenta = Router();
 
+function centavos(entrada) {
+    const value = typeof entrada === 'object' && entrada !== null ? entrada.value : entrada;
+    if (value === undefined || value === null || value === '') return null;
+    if (!/^\d+$/.test(String(value)) || BigInt(value) <= 0n) throw new Error('El monto debe ser un entero positivo en centavos');
+    return String(value);
+}
+
 // SDD §9 POST /personas: registra a alguien sin cuenta y le da su QR (el dinero queda en la Custodia).
-rutasSinCuenta.post('/personas', (req, res) => {
-    const { nombre, cedula, celular } = req.body ?? {};
-    const qrId = `p-${soloDigitos(cedula)}`;
+// Con monto o concepto es un QR de transferencia a efectivo: id propio (un QR con monto sirve para un solo pago),
+// así el QR estático p-<cédula> sigue sirviendo.
+rutasSinCuenta.post('/personas', async (req, res) => {
+    const { nombre, cedula, celular, monto, concepto } = req.body ?? {};
     try {
-        const persona = registrar({ qrId, nombre, cedula, celular });
-        res.json({ ...persona, conCuenta: false });
+        const valor = centavos(monto);
+        const descripcion = String(concepto ?? '').trim() || null;
+        const transferencia = Boolean(valor || descripcion);
+        const qrId = transferencia ? `e-${randomUUID().slice(0, 8)}` : `p-${soloDigitos(cedula)}`;
+        const persona = registrar({
+            qrId, nombre, cedula, celular, ...(transferencia ? { tipo: 'efectivo', monto: valor, descripcion } : {})
+        });
+        // El monto queda en la moneda de la Custodia, que es la wallet que recibe el pago.
+        const moneda = valor ? await op.obtenerWallet(custodia()) : null;
+        const raiz = (process.env.PUBLIC_URL || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
+        res.json({
+            ...persona,
+            conCuenta: false,
+            destino: 'efectivo',
+            url: `${raiz}/#cliente?qr=${encodeURIComponent(qrId)}`,
+            monto: valor ? { value: valor, assetCode: moneda.assetCode, assetScale: moneda.assetScale } : null
+        });
     } catch (error) {
         res.status(400).json({ error: error.message });
     }
