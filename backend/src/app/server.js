@@ -66,12 +66,16 @@ if (process.env.DEMO_VENDEDOR_WALLET) {
 
 // QR estático de demo sin cuenta (id "demo-sin-cuenta"): el dinero queda en la Custodia a nombre de esa cédula.
 if (process.env.CUSTODIA_WALLET && process.env.DEMO_SINCUENTA_CEDULA && process.env.DEMO_SINCUENTA_CELULAR) {
-    registrar({
-        qrId: 'demo-sin-cuenta',
-        nombre: process.env.DEMO_SINCUENTA_NOMBRE || 'Don Pedro',
-        cedula: process.env.DEMO_SINCUENTA_CEDULA,
-        celular: process.env.DEMO_SINCUENTA_CELULAR
-    });
+    try {
+        registrar({
+            qrId: 'demo-sin-cuenta',
+            nombre: process.env.DEMO_SINCUENTA_NOMBRE || 'Don Pedro',
+            cedula: process.env.DEMO_SINCUENTA_CEDULA,
+            celular: process.env.DEMO_SINCUENTA_CELULAR
+        });
+    } catch (error) {
+        console.warn(`[demo-sin-cuenta] no se registró: ${error.message}`);
+    }
 }
 
 const puerto = Number(process.env.PORT) || 3000;

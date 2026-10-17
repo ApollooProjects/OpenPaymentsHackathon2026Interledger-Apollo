@@ -2,6 +2,8 @@ import { randomBytes, randomInt, randomUUID, scryptSync, timingSafeEqual } from 
 import * as op from '../op/index.js';
 import * as store from './store.js';
 import { mensajeParaUsuario } from './errores.js';
+import * as sms from './sms.js';
+import * as vinculos from './vinculos.js';
 
 const VIGENCIA_MS = 24 * 60 * 60 * 1000;
 const PERMISO_CUSTODIA = 'custodia';
@@ -67,16 +69,26 @@ async function identificar({ cedula, celular }) {
         if (buscada) return soloDigitos(meta.cedula) === buscada;
         return celularBuscado && soloDigitos(meta.celular) === celularBuscado;
     });
-    if (propios.length === 0) return null;
-    // Por SMS solo se conoce el celular, y un celular puede tener cobros de varias cédulas:
-    // se usa la cédula del cobro más reciente y solo sus cobros, para no sumar dinero de otra persona.
+    // Por SMS solo se conoce el celular: la cédula sale del vínculo celular → cédula. Sin vínculo (datos anteriores),
+    // se usa la cédula del cobro más reciente con ese celular. En ambos casos se suman todos los cobros de esa cédula.
     if (!buscada) {
-        const reciente = propios.reduce((a, b) => (String(b.creado ?? '') > String(a.creado ?? '') ? b : a));
-        const elegida = soloDigitos(reciente.metadata?.cedula);
-        propios = cobros.filter((cobro) => soloDigitos(cobro.metadata?.cedula) === elegida);
+        let elegida = vinculos.cedulaDeCelular(celularBuscado);
+        if (!elegida && propios.length > 0) {
+            const reciente = propios.reduce((a, b) => (String(b.creado ?? '') > String(a.creado ?? '') ? b : a));
+            elegida = soloDigitos(reciente.metadata?.cedula);
+        }
+        propios = elegida ? cobros.filter((cobro) => soloDigitos(cobro.metadata?.cedula) === elegida) : [];
     }
-    const meta = propios.find((c) => c.metadata?.celular)?.metadata ?? propios[0].metadata;
-    return { cedula: soloDigitos(meta.cedula), celular: celularBuscado || meta.celular || null, cobros: propios };
+    if (propios.length === 0) return null;
+    const cedulaPersona = soloDigitos(propios[0].metadata?.cedula);
+    // El PIN va al celular vinculado a la cédula, nunca a uno viejo que hoy puede ser de otra persona.
+    const masReciente = [...propios].filter((c) => c.metadata?.celular)
+        .sort((a, b) => String(b.creado ?? '').localeCompare(String(a.creado ?? '')))[0];
+    const celularPersona = (celularBuscado && sms.normalizarCelular(celularBuscado))
+        || vinculos.celularDeCedula(cedulaPersona)
+        || sms.normalizarCelular(masReciente?.metadata?.celular)
+        || null;
+    return { cedula: cedulaPersona, celular: celularPersona, cobros: propios };
 }
 
 // Lo retirado se cuenta en el testnet (cobros del Corresponsal con esa cédula), igual que lo recibido en la Custodia:

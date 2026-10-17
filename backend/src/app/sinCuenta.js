@@ -10,6 +10,7 @@ import { db } from './db.js';
 import * as store from './store.js';
 import * as sms from './sms.js';
 import * as retiros from './retiros.js';
+import * as vinculos from './vinculos.js';
 
 db.exec(`
     CREATE TABLE IF NOT EXISTS personas_sin_cuenta (
@@ -40,6 +41,7 @@ export function registrar({ qrId, nombre, cedula, celular }) {
     if (!numero) throw new Error('Celular inválido');
     if (!soloDigitos(cedula)) throw new Error('Cédula inválida');
     if (!String(nombre ?? '').trim()) throw new Error('Falta el nombre');
+    vinculos.vincular({ cedula, celular: numero });
 
     db.prepare(`
         INSERT INTO personas_sin_cuenta (qr_id, nombre, cedula, celular, creado) VALUES (?, ?, ?, ?, ?)

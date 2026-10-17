@@ -4,6 +4,8 @@ import { randomUUID } from 'node:crypto';
 import * as op from '../op/index.js';
 import * as store from './store.js';
 import * as retiros from './retiros.js';
+import * as sms from './sms.js';
+import * as vinculos from './vinculos.js';
 import { calcularReparto, normalizarMeseros } from './reparto.js';
 
 const VIGENCIA_CAJITA_MS = 7 * 24 * 60 * 60 * 1000;
@@ -37,6 +39,8 @@ export async function crearReparto({
     if (deuda !== null && deuda !== undefined && !/^\d+$/.test(String(deuda))) throw new Error('deuda debe ser un entero en centavos');
     if (conCuenta && !aUrl(vendedorWallet).startsWith('https://')) throw new Error('Con cuenta hace falta la wallet del vendedor');
     if (!conCuenta && (!soloDigitos(cedula) || !soloDigitos(celular))) throw new Error('Sin cuenta hacen falta la cédula y el celular');
+    // Sin cuenta, el celular queda vinculado a la cédula (falla si ya es de otra) y normalizado como lo manda el SMS.
+    if (!conCuenta) celular = vinculos.vincular({ cedula, celular }).celular;
     const listaMeseros = normalizarMeseros(meseros);
 
     const pctAhorro = Number(ahorroPorcentaje || 0);
@@ -58,7 +62,7 @@ export async function crearReparto({
         conCuenta: Boolean(conCuenta),
         vendedorWallet: conCuenta ? aUrl(vendedorWallet) : null,
         cedula: conCuenta ? null : soloDigitos(cedula),
-        celular: conCuenta ? null : soloDigitos(celular),
+        celular: conCuenta ? null : celular,
         proveedorWallet: aUrl(proveedorWallet),
         porcentaje: pct,
         deuda: deuda !== null && deuda !== undefined && BigInt(deuda) > 0n ? String(deuda) : null,

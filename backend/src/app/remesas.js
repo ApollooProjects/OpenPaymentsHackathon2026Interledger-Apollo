@@ -3,6 +3,7 @@ import * as op from '../op/index.js';
 import { db } from './db.js';
 import * as motor from './motor.js';
 import * as sms from './sms.js';
+import * as vinculos from './vinculos.js';
 
 const VIGENCIA_COBRO_MS = 24 * 60 * 60 * 1000;
 
@@ -39,6 +40,11 @@ async function destinoDeRemesa({ celular, cedula, destinatarioWallet, nombreRemi
     const numero = sms.normalizarCelular(celular);
     if (!numero) throw errorHttp(400, 'Celular inválido');
     if (!soloDigitos(cedula)) throw errorHttp(400, 'Cédula inválida');
+    try {
+        vinculos.vincular({ cedula, celular: numero });
+    } catch (error) {
+        throw errorHttp(400, error.message);
+    }
     return {
         nombre: `Cédula ••••${soloDigitos(cedula).slice(-4)}`,
         walletUrl: custodia(),
