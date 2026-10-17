@@ -52,6 +52,7 @@
         }
         [hidden] { display: none !important; }
         html, body { background: var(--fondo); color: var(--texto); }
+        html { scroll-padding-top: 80px; }
         body { padding-bottom: calc(var(--alto-barra-abajo) + env(safe-area-inset-bottom)); }
         a { color: var(--azul); text-underline-offset: 3px; }
         h2 { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 0.25rem; color: var(--texto) !important; }
@@ -96,7 +97,7 @@
         details.tarjeta summary { display: flex; align-items: center; min-height: 48px; font-size: 1.05rem; font-weight: 600; line-height: 1.35; color: var(--texto); }
         details.tarjeta[open] summary { margin-bottom: 1rem; }
 
-        .barra { position: sticky; top: 0; z-index: 10; background: var(--superficie); border-bottom: 1px solid var(--borde); }
+        .barra { position: sticky; top: 0; z-index: 10; padding: 0; background: var(--superficie); border-bottom: 1px solid var(--borde); }
         .barra .contenedor { display: flex; align-items: center; justify-content: space-between; min-height: 64px; gap: 1rem; }
         .marca { display: flex; align-items: center; gap: 0.6rem; font-size: 1.2rem; font-weight: 700; letter-spacing: -0.01em; color: var(--texto); text-decoration: none; }
         .marca { flex: none; white-space: nowrap; }
@@ -149,7 +150,7 @@
 
         .dos-columnas { display: grid; gap: 1rem; align-items: start; }
         .dos-columnas > * { min-width: 0; }
-        .resumen { position: sticky; bottom: calc(var(--alto-barra-abajo) + env(safe-area-inset-bottom)); z-index: 2; margin: 0 -4px; padding: 1rem; border-radius: 16px; background: var(--superficie); border: 1px solid var(--borde); box-shadow: 0 -6px 20px rgba(17, 24, 39, 0.08); }
+        .resumen { padding: 1rem; border-radius: 16px; background: var(--superficie); border: 1px solid var(--borde); box-shadow: var(--sombra); }
         .resumen .nota { display: flex; gap: 0.5rem; align-items: flex-start; font-size: 0.9rem; color: var(--texto-suave); margin: 0.75rem 0 0; }
         .resumen .nota svg { width: 18px; height: 18px; flex: none; margin-top: 2px; }
         .resumen button { margin: 0; }
@@ -158,7 +159,7 @@
         @media (min-width: 900px) {
             .dos-columnas { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 1.5rem; }
             .dos-columnas.iguales { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
-            .resumen { top: 88px; bottom: auto; margin: 0; box-shadow: var(--sombra); }
+            .resumen { position: sticky; top: 88px; z-index: 2; }
         }
 
         [data-aviso], [data-aviso-retiro] {
