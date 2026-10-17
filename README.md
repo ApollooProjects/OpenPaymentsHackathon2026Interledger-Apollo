@@ -38,6 +38,9 @@ retiro con un pago Custodia → Corresponsal.
 
 Los montos usan siempre el `assetCode`/`assetScale` de cada wallet.
 
+**Documentación técnica completa** (arquitectura, módulo de Open Payments, flujos con diagramas de secuencia, modelo de
+datos, API y limitaciones): [docs/TECNICA.md](docs/TECNICA.md).
+
 | Reparto (P1) | Sin cuenta: SMS → PIN → corresponsal |
 |---|---|
 | ![Secuencia del reparto](docs/diagramas/secuencia-p1-reparto.png) | ![Secuencia sin cuenta](docs/diagramas/secuencia-sin-cuenta.png) |
@@ -150,7 +153,7 @@ backend/src/app/   servidor Express, motor de pagos, repartos, retiros, SMS, SQL
 app/               app web (HTML + JS sin build)
 corresponsal/      pantalla del cajero
 scripts/           permiso de la Custodia y pruebas contra el testnet
-docs/              diagramas y capturas
+docs/              documentación técnica (TECNICA.md), diagramas y capturas
 prompts/           prompts usados durante el desarrollo
 ```
 
