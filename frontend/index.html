@@ -120,6 +120,7 @@
         .pestanas [data-pestana="vendedor"] { --icono: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='7' height='7' rx='1'/%3E%3Crect x='14' y='3' width='7' height='7' rx='1'/%3E%3Crect x='3' y='14' width='7' height='7' rx='1'/%3E%3Cpath d='M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3'/%3E%3C/svg%3E"); }
         .pestanas [data-pestana="cobros"] { --icono: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 7h15a3 3 0 0 1 3 3v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'/%3E%3Cpath d='M3 7l12-4v4'/%3E%3Ccircle cx='16' cy='14' r='1.5'/%3E%3C/svg%3E"); }
         .pestanas [data-pestana="remitente"] { --icono: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M22 2 11 13'/%3E%3Cpath d='M22 2 15 22l-4-9-9-4z'/%3E%3C/svg%3E"); }
+        .pestanas [data-pestana="recibir"] { --icono: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3v12M7 10l5 5 5-5'/%3E%3Cpath d='M4 17v3h16v-3'/%3E%3C/svg%3E"); }
         .pestanas [data-pestana="celular"], .tarjeta-enlace[href="#celular"] { --icono: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='5' y='2' width='14' height='20' rx='2'/%3E%3Cpath d='M12 18h.01'/%3E%3C/svg%3E"); }
         .pestanas [data-pestana="cajero"], .tarjeta-enlace[href="#cajero"] { --icono: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 9 4.5 4h15L21 9M3 9h18M4 9v11h16V9M9 20v-6h6v6'/%3E%3C/svg%3E"); }
         .pestanas a[aria-current="page"] { color: var(--azul); background: var(--azul-suave); }
@@ -278,6 +279,11 @@
         .boton-enlace:hover { background: var(--azul-hover); }
 
         /* Enviar dinero: resumen antes de enviar. */
+        .destino-pago { margin: 0 0 1rem; }
+        .qr-grande { text-align: center; }
+        .qr-grande h3, .qr-grande ol { text-align: left; }
+        .qr-grande img { display: block; width: min(100%, 320px); height: auto; margin: 0 auto 0.75rem; }
+        .qr-grande .enlace-compartir { word-break: break-all; }
         .cuentas { display: grid; gap: 0.75rem; margin: 0 0 1rem; }
         .cuentas div { padding: 0.75rem 1rem; border-radius: 12px; background: var(--superficie-suave); border: 1px solid var(--borde); }
         .cuentas dt { font-size: 0.95rem; font-weight: 500; color: var(--texto-suave); }
@@ -330,6 +336,7 @@
                     <li hidden><a href="#vendedor" data-pestana="vendedor">Mi puesto</a></li>
                     <li hidden><a href="#cobros" data-pestana="cobros">Mis cobros</a></li>
                     <li hidden><a href="#remitente" data-pestana="remitente">Enviar dinero</a></li>
+                    <li hidden><a href="#recibir" data-pestana="recibir">Recibir dinero</a></li>
                     <li class="herramienta"><a href="#celular" data-pestana="celular" aria-label="Celular: mensajes de texto (herramienta de la demo)">Celular</a></li>
                     <li class="herramienta"><a href="#cajero" data-pestana="cajero" aria-label="Cajero: corresponsal que entrega el efectivo (herramienta de la demo)">Cajero</a></li>
                 </ul>
@@ -369,6 +376,7 @@
         <section id="cliente" hidden>
             <h2>Pagar</h2>
             <p data-vendedor>Escanea el QR del vendedor para pagar.</p>
+            <p class="aviso-azul destino-pago angosto" data-destino-pago hidden></p>
             <article class="tarjeta angosto vacio-guia" data-sin-qr hidden>
                 <p data-sin-qr-motivo><strong>Para pagar necesitas el código QR del puesto.</strong></p>
                 <ol class="pasos-guia">
@@ -653,6 +661,67 @@
             </article>
             <p data-aviso class="angosto" role="alert" hidden></p>
         </section>
+        <section id="recibir" hidden>
+            <h2>Recibir dinero</h2>
+            <p class="ayuda">Pide dinero con un código QR. Quien te va a pagar lo escanea con su celular y paga desde su billetera.</p>
+            <form class="tarjeta angosto" onsubmit="event.preventDefault()" novalidate data-pedir>
+                <fieldset>
+                    <legend>¿Cómo quieres recibir el dinero?</legend>
+                    <div class="opciones">
+                        <label><input type="radio" name="destino" value="cuenta" checked> <span><strong>Que me llegue a mi cuenta</strong><small>El dinero pasa directo de su billetera a la tuya.</small></span></label>
+                        <label><input type="radio" name="destino" value="efectivo"> <span><strong>Que me llegue en efectivo</strong><small>No necesitas cuenta. Te llega un mensaje y lo sacas en un corresponsal con un PIN y tu cédula.</small></span></label>
+                    </div>
+                </fieldset>
+                <label>
+                    Tu nombre
+                    <small>Quien paga lo verá. Ejemplo: Mateo</small>
+                    <input name="nombre" autocomplete="off" required>
+                </label>
+                <label data-cuenta>
+                    Tu billetera
+                    <small>Aquí te llega el dinero. Ejemplo: https://ilp.interledger-test.dev/mateo</small>
+                    <input name="wallet" type="text" inputmode="url" spellcheck="false" autocapitalize="off" autocomplete="off">
+                </label>
+                <div class="grid" data-efectivo hidden>
+                    <label>
+                        Tu celular
+                        <small>Ahí te avisamos cuando llegue. Ejemplo: 3001234567</small>
+                        <input name="celular" inputmode="tel" autocomplete="off">
+                    </label>
+                    <label>
+                        Tu cédula
+                        <small>La pides en el corresponsal. Solo números.</small>
+                        <input name="cedula" inputmode="numeric" autocomplete="off">
+                    </label>
+                </div>
+                <div class="grid">
+                    <label>
+                        ¿Cuánto? (opcional)
+                        <small>Si lo pones, el QR sirve para un solo pago. Si no, quien paga escribe el monto.</small>
+                        <span class="campo-pesos"><input name="monto" inputmode="decimal" autocomplete="off"></span>
+                    </label>
+                    <label>
+                        ¿Por qué? (opcional)
+                        <small>Ejemplo: almuerzo, arriendo</small>
+                        <input name="concepto" autocomplete="off" maxlength="80">
+                    </label>
+                </div>
+                <p class="aviso-error" data-aviso role="alert" hidden></p>
+                <button type="submit">Crear mi código QR</button>
+            </form>
+            <article class="tarjeta angosto qr qr-grande" data-qr-listo hidden tabindex="-1">
+                <p><strong data-titulo-qr></strong></p>
+                <p class="cifra" data-monto-qr hidden></p>
+                <img data-imagen-qr alt="" width="320" height="320">
+                <p><small>Si no puede escanear, mándale este enlace: <a class="enlace-compartir" data-enlace-qr></a></small></p>
+                <div class="navegacion-pasos">
+                    <button type="button" class="secondary outline" data-otro>Crear otro QR</button>
+                    <button type="button" data-compartir>Compartir enlace</button>
+                </div>
+                <h3>¿Qué pasa después?</h3>
+                <ol class="pasos-guia" data-despues></ol>
+            </article>
+        </section>
         <section id="celular" hidden>
             <h2>Mensajes</h2>
             <p class="ayuda">Así ve los mensajes de texto alguien con un celular sencillo, sin la app. Escribe su número y toca «Ver mensajes». En el celular, toca <strong>1</strong> para ver el saldo o <strong>2</strong> para sacar el dinero.</p>
@@ -724,5 +793,6 @@
     <script type="module" src="js/cajero.js"></script>
     <script type="module" src="js/remitente.js"></script>
     <script type="module" src="js/cobros.js"></script>
+    <script type="module" src="js/recibir.js"></script>
 </body>
 </html>

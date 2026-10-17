@@ -22,6 +22,17 @@ const boton = formulario.querySelector('button[type=submit]');
 const aviso = seccion.querySelector('[data-aviso]');
 const sinQr = seccion.querySelector('[data-sin-qr]');
 const billetera = seccion.querySelector('[data-billetera]');
+const destinoPago = seccion.querySelector('[data-destino-pago]');
+
+// QR de transferencia entre personas: quien paga ve claro si el dinero llega a una cuenta o en efectivo.
+function pintarDestino(qr) {
+    const transferencia = qr && ['transferencia', 'efectivo'].includes(qr.tipo);
+    destinoPago.hidden = !transferencia;
+    if (!transferencia) return;
+    destinoPago.textContent = qr.destino === 'efectivo'
+        ? `${qr.vendedor} lo recibe en efectivo: el dinero queda guardado a su nombre y lo retira en un corresponsal con su cédula.`
+        : `El dinero llega directo a la billetera de ${qr.vendedor}${qr.walletDestino ? ` (${qr.walletDestino.split('/').filter(Boolean).pop()})` : ''}.`;
+}
 
 // Guía cuando no hay QR que pagar (sin QR, vencido, ya usado o inexistente).
 function mostrarSinQr(motivo) {
@@ -141,6 +152,7 @@ alAbrirPestana('cliente', async (params) => {
     formulario.hidden = true;
     bloqueRapidos.hidden = true;
     sinQr.hidden = true;
+    pintarDestino(null);
     campoPagador.value = campoPagador.value || pagadorGuardado();
     pintarBilletera();
 
@@ -167,6 +179,7 @@ alAbrirPestana('cliente', async (params) => {
     titulo.textContent = qrActual.descripcion
         ? `Pagarle a ${qrActual.vendedor} · ${qrActual.descripcion}`
         : `Pagarle a ${qrActual.vendedor}`;
+    pintarDestino(qrActual);
     if (qrActual.monto) {
         campoMonto.value = formatearMonto(qrActual.monto);
         campoMonto.readOnly = true;

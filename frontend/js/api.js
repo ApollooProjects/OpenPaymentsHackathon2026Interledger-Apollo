@@ -337,6 +337,17 @@ export function obtenerCobros(wallet) {
     return pedir('GET', `/cobros?wallet=${encodeURIComponent(wallet)}`);
 }
 
+// Recibir dinero, a cuenta: { nombre?, wallet, monto?, concepto? } → { qrId, url, nombre, monto: Monto | null, destino: 'cuenta' }
+export function crearQrTransferencia(cuerpo) {
+    return pedir('POST', '/qr/transferencia', cuerpo);
+}
+
+// Recibir dinero, en efectivo (y P2 sin cuenta): { nombre, cedula, celular, monto?, concepto? }
+// → { qrId, url, nombre, cedula, celular, monto: Monto | null, destino: 'efectivo' }. El dinero queda en la Custodia.
+export function registrarPersona(cuerpo) {
+    return pedir('POST', '/personas', cuerpo);
+}
+
 export function urlImagenQr(qrId) {
     return `/qr/${encodeURIComponent(qrId)}/imagen`;
 }

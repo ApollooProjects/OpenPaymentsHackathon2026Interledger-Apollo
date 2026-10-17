@@ -12,6 +12,7 @@
         { id: 'mesero1', nombre: 'Andrés', rol: 'Mesero 1', detalle: 'Recibe su parte de las propinas.', pestanas: ['cobros'], wallet: wallet('mesero1apollo') },
         { id: 'mesero2', nombre: 'Camila', rol: 'Mesera 2', detalle: 'Recibe su parte de las propinas.', pestanas: ['cobros'], wallet: wallet('mesero-2-apollo') },
         { id: 'cliente', nombre: 'Laura', rol: 'Cliente', detalle: 'Paga con QR desde su billetera.', pestanas: ['cliente', 'recibo'], wallet: wallet('cliente-a-apollo') },
+        { id: 'persona', nombre: 'Mateo', rol: 'Persona', detalle: 'Le pide dinero a un amigo con un QR: que le llegue a su cuenta o en efectivo.', pestanas: ['recibir'], wallet: wallet('cliente-b-apollo') },
         { id: 'remitente', nombre: 'Carlos', rol: 'Remitente en el exterior', detalle: 'Vive afuera y le manda dinero a su familia.', pestanas: ['remitente'], wallet: wallet('remitente-apollo') },
     ];
     const HERRAMIENTAS = ['celular', 'cajero'];
