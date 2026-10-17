@@ -85,9 +85,19 @@ export async function avisarLlegada(resumen) {
             .run(pago.id, indice, new Date().toISOString());
         if (changes === 0) return;
         const recibido = destino.recibido ?? destino.monto;
-        sms.enviar(celular, `La Cajita: te llegaron ${formatear(recibido)} por un pago con QR. `
-            + 'Escribe SALDO para ver cuánto tienes o RETIRAR para sacarlo en efectivo.');
+        sms.enviar(celular, pago.plan.origen?.tipo === 'remesa'
+            ? textoRemesa(recibido, destino.metadata?.remitente ?? pago.plan.origen?.nombreRemitente)
+            : `La Cajita: te llegaron ${formatear(recibido)} por un pago con QR. `
+                + 'Escribe SALDO para ver cuánto tienes o RETIRAR para sacarlo en efectivo.');
     });
+}
+
+// H11: "Te llegaron $200.000 de Carlos (desde el exterior). Responde RETIRAR para recibir tu PIN de retiro."
+// Si llegan varias remesas antes de retirar, SALDO y RETIRAR ya las suman (todas quedan en la Custodia con la cédula).
+export function textoRemesa(recibido, remitente) {
+    const de = remitente ? ` de ${remitente}` : '';
+    return `La Cajita: te llegaron ${formatear(recibido)}${de} desde el exterior. `
+        + 'Responde RETIRAR para recibir tu PIN de retiro o SALDO para ver cuánto tienes.';
 }
 
 export const rutasSinCuenta = Router();
