@@ -24,6 +24,15 @@
         .telefono .atajos { display: flex; gap: 6px; margin-bottom: 8px; }
         .telefono .atajos button { flex: 1; margin: 0; padding: 4px; font-size: 0.8rem; color: #e9f0df; border-color: #9fb889; }
         .telefono fieldset { margin: 0; }
+
+        /* Selector de perfil («Entrar como…»). */
+        [hidden] { display: none !important; }
+        .saludo { margin: 0 0 0.5rem; text-align: right; font-size: 0.9rem; }
+        .perfiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 0.75rem; margin-bottom: 1.5rem; }
+        .perfiles button { margin: 0; text-align: left; }
+        .perfiles small { display: block; margin-top: 0.25rem; font-size: 0.8rem; }
+        .herramientas { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--pico-muted-border-color); text-align: center; }
+        #cobros progress { margin: 0.25rem 0 0; }
     </style>
 </head>
 <body>
@@ -33,16 +42,34 @@
                 <li><strong>La Cajita</strong></li>
             </ul>
             <ul>
-                <li><a href="#cliente">Cliente</a></li>
-                <li><a href="#recibo">Recibo</a></li>
-                <li><a href="#vendedor">Vendedor</a></li>
-                <li><a href="#remitente">Remitente</a></li>
-                <li><a href="#celular">Celular</a></li>
-                <li><a href="#cajero">Cajero</a></li>
+                <li hidden><a href="#cliente" data-pestana="cliente">Pagar</a></li>
+                <li hidden><a href="#recibo" data-pestana="recibo">Recibo</a></li>
+                <li hidden><a href="#vendedor" data-pestana="vendedor">Mi puesto</a></li>
+                <li hidden><a href="#cobros" data-pestana="cobros">Mis cobros</a></li>
+                <li hidden><a href="#remitente" data-pestana="remitente">Enviar dinero</a></li>
             </ul>
         </nav>
+        <p class="saludo" data-saludo></p>
     </header>
     <main class="container">
+        <section id="perfil" hidden>
+            <h2>Entrar como…</h2>
+            <p>Perfiles de la demo, sin contraseña. Quien no tiene cuenta no se registra: todo le llega por SMS (mira la herramienta Celular).</p>
+            <div class="perfiles" data-perfiles></div>
+        </section>
+        <section id="cobros" hidden>
+            <h2>Mis cobros</h2>
+            <article>
+                <p>Te han llegado <strong data-total>$ 0</strong></p>
+                <p><small data-cuantos></small></p>
+            </article>
+            <div data-deudas hidden>
+                <h3>Por vendedor</h3>
+                <div data-lista-deudas></div>
+            </div>
+            <ul data-movimientos></ul>
+            <p data-aviso hidden></p>
+        </section>
         <section id="cliente" hidden>
             <h2>Cliente</h2>
             <p data-vendedor>Escanea el QR del vendedor para pagar.</p>
@@ -223,25 +250,16 @@
             <article data-resultado hidden></article>
         </section>
     </main>
-    <script>
-        const pestanas = document.querySelectorAll('main > section');
-
-        function mostrarPestana() {
-            const nombre = location.hash.slice(1).split('?')[0] || 'cliente';
-            pestanas.forEach((seccion) => {
-                seccion.hidden = seccion.id !== nombre;
-            });
-            window.scrollTo(0, 0);
-        }
-
-        window.addEventListener('hashchange', mostrarPestana);
-        mostrarPestana();
-    </script>
+    <footer class="container herramientas">
+        <small>Herramientas de la demo: <a href="#celular">Celular</a> · <a href="#cajero">Cajero (corresponsal)</a></small>
+    </footer>
+    <script src="js/perfil.js"></script>
     <script type="module" src="js/cliente.js"></script>
     <script type="module" src="js/recibo.js"></script>
     <script type="module" src="js/vendedor.js"></script>
     <script type="module" src="js/celular.js"></script>
     <script type="module" src="js/cajero.js"></script>
     <script type="module" src="js/remitente.js"></script>
+    <script type="module" src="js/cobros.js"></script>
 </body>
 </html>
