@@ -3,13 +3,13 @@
 ## Herramientas usadas
 - **Claude Code** (modelos Claude Opus 5.5 y, en algunas tareas de apoyo, Claude Sonnet 5.5). Todo el equipo lo usó.
 - Planes pagados: **2 cuentas de USD 20/mes y 1 cuenta de USD 100/mes** (USD 140 en suscripciones).
-- Consumo medido en la máquina de Raúl (30 sesiones de Claude Code del proyecto, 15–17 de octubre):
+- Consumo medido en la máquina de Raúl (30 sesiones de Claude Code del proyecto, 16–17 de octubre):
 
   | Modelo | Entrada | Salida | Escritura de caché | Lectura de caché | Equivalente a precio de API |
   |---|---|---|---|---|---|
-  | Claude Opus 5.5 | 4.272 | 1.254.141 | 5.651.659 | 376.010.433 | USD 145,52 |
+  | Claude Opus 5.5 | 3.628 | 1.160.528 | 4.643.460 | 339.099.424 | USD 128,19 |
   | Claude Sonnet 5.5 | 104 | 117.439 | 518.377 | 11.204.692 | USD 5,49 |
-  | **Total** | | | | | **USD 151,00** |
+  | **Total** | | | | | **USD 133,68** |
 
   Las sesiones de las otras cuentas no están incluidas en esta tabla. Al ser planes de suscripción, el costo real es el de los planes, no el equivalente de API.
 
