@@ -53,10 +53,21 @@ async function actualizarPanel() {
         $('[data-barra]').max = Number(deuda) || 1;
         $('[data-barra]').value = Number(pagado);
         $('[data-saldada]').hidden = !(deuda > 0n && pagado >= deuda);
+        mostrarPendiente(estado.retiroPendiente);
         mostrarAviso(aviso, '');
     } catch (error) {
-        mostrarAviso(aviso, `No se pudo leer tu reparto: ${error.message}`);
+        mostrarAviso(aviso, `⚠ No pudimos mostrar tus ventas. Intenta otra vez. (${error.message})`);
     }
+}
+
+// PIN pedido y todavía sin cobrar: se muestra junto al botón para que se vea que el retiro sí quedó listo.
+let pendiente = null;
+function mostrarPendiente(retiro) {
+    pendiente ??= $('[data-retirar]').insertAdjacentElement('beforebegin', document.createElement('p'));
+    pendiente.hidden = !retiro;
+    if (!retiro) return;
+    const vence = new Date(retiro.vence).toLocaleString('es-CO', { weekday: 'short', hour: 'numeric', minute: '2-digit' });
+    pendiente.textContent = `🔑 PIN activo por ${formatearMonto(retiro.monto)} · vence ${vence}. Llévalo con tu cédula a cualquier corresponsal.`;
 }
 
 function mostrarPanel() {
@@ -130,9 +141,9 @@ formConfigurar.addEventListener('submit', async (evento) => {
     if (conCuenta) cuerpo.vendedorWallet = campos.walletVendedor.value.trim().replace(/^\$/, 'https://');
     else Object.assign(cuerpo, { cedula: campos.cedula.value.replace(/\D/g, ''), celular: campos.celular.value.replace(/\D/g, '') });
 
-    if (textoDeuda && !deuda) return mostrarAviso(aviso, 'La deuda no es válida (déjala vacía si no le debes nada).');
-    if (conCuenta && !cuerpo.vendedorWallet.startsWith('https://')) return mostrarAviso(aviso, 'Tu wallet address empieza por https:// o $');
-    if (!conCuenta && (!cuerpo.cedula || !cuerpo.celular)) return mostrarAviso(aviso, 'Sin cuenta necesitamos tu cédula y tu celular para el retiro.');
+    if (textoDeuda && !deuda) return mostrarAviso(aviso, '⚠ Escribe lo que le debes solo con números (ejemplo: 40000). Si no le debes nada, déjalo vacío.');
+    if (conCuenta && !cuerpo.vendedorWallet.startsWith('https://')) return mostrarAviso(aviso, '⚠ La dirección de tu billetera debe empezar por https:// o por $');
+    if (!conCuenta && (!cuerpo.cedula || !cuerpo.celular)) return mostrarAviso(aviso, '⚠ Escribe tu cédula y tu celular: los necesitas para sacar tu dinero.');
 
     const boton = formConfigurar.querySelector('button');
     boton.setAttribute('aria-busy', 'true');
@@ -143,7 +154,7 @@ formConfigurar.addEventListener('submit', async (evento) => {
         location.hash = 'vendedor';
         mostrarPanel();
     } catch (error) {
-        mostrarAviso(aviso, `No se pudo crear el reparto: ${error.message}`);
+        mostrarAviso(aviso, `⚠ No pudimos guardar tus datos. Revisa las billeteras e intenta otra vez. (${error.message})`);
     } finally {
         boton.removeAttribute('aria-busy');
     }
@@ -160,13 +171,13 @@ $('[data-retirar]').addEventListener('click', async () => {
         const resultado = await retirarReparto(reparto.id);
         if (resultado.ok === false) throw new Error(resultado.error);
         avisoRetiro.replaceChildren(
-            'Listo: te llegó un SMS con el PIN. ',
-            Object.assign(document.createElement('a'), { href: `#celular?numero=${reparto.celular}`, textContent: 'Ver el SMS' })
+            '✅ Listo: te enviamos un mensaje con tu PIN. ',
+            Object.assign(document.createElement('a'), { href: `#celular?numero=${reparto.celular}`, textContent: 'Ver el mensaje' })
         );
         avisoRetiro.hidden = false;
         actualizarPanel();
     } catch (error) {
-        mostrarAviso(avisoRetiro, `No se pudo retirar: ${error.message}`);
+        mostrarAviso(avisoRetiro, `⚠ No pudimos hacer el retiro. Intenta otra vez. (${error.message})`);
     } finally {
         boton.removeAttribute('aria-busy');
         boton.disabled = false;
@@ -195,12 +206,12 @@ formQr.addEventListener('submit', async (evento) => {
     evento.preventDefault();
     const campos = formQr.elements;
     const meseros = campos.meseros.value.split(/[\s,]+/).map((m) => m.trim().replace(/^\$/, 'https://')).filter(Boolean);
-    if (meseros.some((m) => !m.startsWith('https://'))) return mostrarAviso(aviso, 'Cada wallet de mesero empieza por https:// o $');
+    if (meseros.some((m) => !m.startsWith('https://'))) return mostrarAviso(aviso, '⚠ Cada billetera de mesero debe empezar por https:// o por $');
 
     const cuerpo = { vendedor: reparto.vendedor, repartoId: reparto.id, tipo: 'personalizado' };
     if (campos.monto.value.trim()) {
         cuerpo.monto = aMonto(campos.monto.value, MONEDA_DEMO);
-        if (!cuerpo.monto) return mostrarAviso(aviso, 'El monto no es válido.');
+        if (!cuerpo.monto) return mostrarAviso(aviso, '⚠ Escribe el monto solo con números. Ejemplo: 9000');
     }
     if (campos.descripcion.value.trim()) cuerpo.descripcion = campos.descripcion.value.trim();
     if (meseros.length) cuerpo.meseros = meseros;
@@ -222,6 +233,6 @@ formQr.addEventListener('submit', async (evento) => {
         nuevo.hidden = false;
         mostrarAviso(aviso, '');
     } catch (error) {
-        mostrarAviso(aviso, `No se pudo generar el QR: ${error.message}`);
+        mostrarAviso(aviso, `⚠ No pudimos crear el QR. Intenta otra vez. (${error.message})`);
     }
 });

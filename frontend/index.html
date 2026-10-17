@@ -1,241 +1,549 @@
 <!doctype html>
-<html lang="es">
+<html lang="es" data-theme="light">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#FFFFFF">
     <title>La Cajita</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
     <style>
-        /* En el celular las pestañas bajan de línea en vez de salirse de la pantalla. */
-        header nav { flex-wrap: wrap; }
-        header nav ul:last-child { flex-wrap: wrap; }
-        #vendedor img { max-width: 100%; height: auto; }
+        :root {
+            --fondo: #F4F6FA;
+            --superficie: #FFFFFF;
+            --superficie-suave: #F8FAFC;
+            --texto: #111827;
+            --texto-suave: #4B5563;
+            --borde: #E2E8F0;
+            --borde-campo: #7B8494;
+            --azul: #1D4ED8;
+            --azul-hover: #1E40AF;
+            --azul-suave: #EEF3FF;
+            --exito: #047857;
+            --exito-suave: #ECFDF5;
+            --error: #B91C1C;
+            --error-suave: #FEF2F2;
+            --atencion: #92400E;
+            --atencion-suave: #FFF7E6;
+            --sombra: 0 1px 2px rgba(17, 24, 39, 0.04), 0 4px 16px rgba(17, 24, 39, 0.06);
+            --alto-barra-abajo: 72px;
+            --pico-font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+            --pico-font-size: 112.5%;
+            --pico-line-height: 1.5;
+            --pico-color: var(--texto);
+            --pico-background-color: var(--fondo);
+            --pico-muted-color: var(--texto-suave);
+            --pico-h1-color: var(--texto);
+            --pico-h2-color: var(--texto);
+            --pico-h3-color: var(--texto);
+            --pico-primary: var(--azul);
+            --pico-primary-hover: var(--azul-hover);
+            --pico-primary-background: var(--azul);
+            --pico-primary-hover-background: var(--azul-hover);
+            --pico-primary-border: var(--azul);
+            --pico-primary-hover-border: var(--azul-hover);
+            --pico-primary-inverse: #FFFFFF;
+            --pico-form-element-border-color: var(--borde-campo);
+            --pico-form-element-placeholder-color: var(--texto-suave);
+            --pico-border-radius: 12px;
+            --pico-spacing: 1rem;
+        }
+        [hidden] { display: none !important; }
+        html, body { background: var(--fondo); color: var(--texto); }
+        body { padding-bottom: calc(var(--alto-barra-abajo) + env(safe-area-inset-bottom)); }
+        a { color: var(--azul); text-underline-offset: 3px; }
+        h2 { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 0.25rem; color: var(--texto) !important; }
+        h3 { font-size: 1.15rem; font-weight: 600; color: var(--texto) !important; }
+        .contenedor { width: 100%; max-width: 1080px; margin: 0 auto; padding: 0 16px; }
+        main.contenedor { padding-top: 1.25rem; padding-bottom: 2rem; }
+        .ayuda { font-size: 1rem; color: var(--texto-suave); margin-bottom: 1.25rem; max-width: 60ch; }
+        .tarjeta { background: var(--superficie); border: 1px solid var(--borde); border-radius: 16px; padding: 1.25rem; margin-bottom: 1rem; box-shadow: var(--sombra); }
+        .angosto { max-width: 720px; }
+        .muy-angosto { max-width: 560px; }
+
+        label, fieldset legend { font-weight: 600; font-size: 1rem; color: var(--texto); margin-bottom: 0.4rem; }
+        label small, legend small { display: block; font-weight: 400; font-size: 0.9rem; line-height: 1.4; color: var(--texto-suave); margin: 0.1rem 0 0.45rem; }
+        input:not([type=checkbox], [type=radio]), select, textarea {
+            min-height: 54px; font-size: 1.1rem; border-radius: 12px !important;
+            border: 1.5px solid var(--borde-campo) !important; background-color: var(--superficie) !important; color: var(--texto) !important;
+        }
+        input:not([type=checkbox], [type=radio]):focus, select:focus, textarea:focus { border-color: var(--azul) !important; }
+        input[readonly] { background-color: #EEF1F5 !important; border-style: dashed !important; cursor: default; }
+        button, [type=submit], [type=button] {
+            min-height: 56px; width: 100%; font-size: 1.1rem; font-weight: 600; border-radius: 12px;
+            border: 1.5px solid var(--azul); color: #FFFFFF; background: var(--azul);
+        }
+        button:hover, [type=submit]:hover, [type=button]:hover { background: var(--azul-hover); border-color: var(--azul-hover); color: #FFFFFF; }
+        button.secondary.outline[type=button] { background: var(--superficie); color: var(--texto); border-color: var(--borde-campo); }
+        button.secondary.outline[type=button]:hover { background: var(--superficie-suave); color: var(--texto); border-color: var(--texto); }
+        :focus-visible { outline: 3px solid var(--azul) !important; outline-offset: 3px; box-shadow: none !important; }
+
+        .opciones { display: grid; gap: 10px; margin-bottom: 1rem; }
+        .opciones label {
+            display: flex; align-items: center; gap: 0.75rem; width: auto; min-height: 56px; margin: 0; padding: 0.6rem 1rem;
+            border: 1.5px solid var(--borde-campo); border-radius: 12px; background: var(--superficie); font-weight: 500; cursor: pointer;
+        }
+        .opciones label:hover { border-color: var(--azul); }
+        .opciones label:has(input:checked) { border-color: var(--azul); background: var(--azul-suave); box-shadow: inset 0 0 0 1.5px var(--azul); font-weight: 600; }
+        .opciones input[type=radio] { flex: none; width: 1.4rem; height: 1.4rem; margin: 0; }
+        .opciones.en-fila { grid-template-columns: repeat(2, 1fr); }
+        .opciones + input { margin-top: -0.25rem; }
+        .interruptor { display: flex; width: 100%; align-items: flex-start; gap: 0.75rem; padding: 0.9rem 1rem; margin-bottom: 1rem; border: 1.5px solid var(--borde); border-radius: 12px; background: var(--superficie-suave); font-weight: 500; font-size: 0.98rem; cursor: pointer; }
+        .interruptor input[role=switch] { flex: none; font-size: 1.15rem; margin: 0.1rem 0 0; }
+        progress { height: 12px; border-radius: 6px; margin: 0.5rem 0 0; }
+        details.tarjeta summary { display: flex; align-items: center; min-height: 48px; font-size: 1.05rem; font-weight: 600; line-height: 1.35; color: var(--texto); }
+        details.tarjeta[open] summary { margin-bottom: 1rem; }
+
+        .barra { position: sticky; top: 0; z-index: 10; background: var(--superficie); border-bottom: 1px solid var(--borde); }
+        .barra .contenedor { display: flex; align-items: center; justify-content: space-between; min-height: 64px; gap: 1rem; }
+        .marca { display: flex; align-items: center; gap: 0.6rem; font-size: 1.2rem; font-weight: 700; letter-spacing: -0.01em; color: var(--texto); text-decoration: none; }
+        .marca { flex: none; white-space: nowrap; }
+        .marca svg { width: 34px; height: 34px; flex: none; }
+        .saludo { margin: 0; font-size: 0.88rem; line-height: 1.35; color: var(--texto-suave); text-align: right; }
+        .saludo a { font-weight: 600; }
+        .pestanas {
+            position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+            padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); background: var(--superficie); border-top: 1px solid var(--borde);
+        }
+        .pestanas ul { display: flex; flex: 1; gap: 6px; margin: 0 !important; padding: 0; }
+        .pestanas li { flex: 1; margin: 0; padding: 0; list-style: none; }
+        .pestanas a {
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 58px; margin: 0; padding: 4px 6px;
+            border-radius: 12px; color: var(--texto-suave); font-size: 0.85rem; font-weight: 600; text-decoration: none; text-align: center;
+        }
+        .pestanas a::before { content: ''; width: 24px; height: 24px; background: currentColor; -webkit-mask: var(--icono) center / contain no-repeat; mask: var(--icono) center / contain no-repeat; }
+        .pestanas [data-pestana="cliente"] { --icono: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='2' y='5' width='20' height='14' rx='2'/%3E%3Cpath d='M2 10h20M6 15h4'/%3E%3C/svg%3E"); }
+        .pestanas [data-pestana="recibo"] { --icono: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2z'/%3E%3Cpath d='M9 8h6M9 12h6'/%3E%3C/svg%3E"); }
+        .pestanas [data-pestana="vendedor"] { --icono: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='7' height='7' rx='1'/%3E%3Crect x='14' y='3' width='7' height='7' rx='1'/%3E%3Crect x='3' y='14' width='7' height='7' rx='1'/%3E%3Cpath d='M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3'/%3E%3C/svg%3E"); }
+        .pestanas [data-pestana="cobros"] { --icono: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 7h15a3 3 0 0 1 3 3v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'/%3E%3Cpath d='M3 7l12-4v4'/%3E%3Ccircle cx='16' cy='14' r='1.5'/%3E%3C/svg%3E"); }
+        .pestanas [data-pestana="remitente"] { --icono: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M22 2 11 13'/%3E%3Cpath d='M22 2 15 22l-4-9-9-4z'/%3E%3C/svg%3E"); }
+        .pestanas a[aria-current="page"] { color: var(--azul); background: var(--azul-suave); }
+        .pestanas:not(:has(li:not([hidden]) ~ li:not([hidden]))) { display: none; }
+        body:not(:has(.pestanas li:not([hidden]) ~ li:not([hidden]))) { --alto-barra-abajo: 0px; }
+        @media (min-width: 900px) {
+            body { padding-bottom: 0; }
+            .barra .contenedor > .pestanas { position: static; flex: 1; padding: 0; border: 0; background: none; }
+            .pestanas ul { justify-content: center; gap: 4px; }
+            .pestanas li { flex: none; }
+            .pestanas a { flex-direction: row; gap: 8px; min-height: 44px; padding: 0 14px; font-size: 0.95rem; }
+            .pestanas a::before { width: 20px; height: 20px; }
+            .pestanas a:hover { color: var(--texto); background: var(--superficie-suave); }
+            .pestanas a[aria-current="page"]:hover { color: var(--azul); background: var(--azul-suave); }
+        }
+
+        /* Selector de perfil («Entrar como…»). */
+        .perfiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 0.75rem; margin-bottom: 1.5rem; }
+        .perfiles button[type=button] { display: block; min-height: 96px; margin: 0; padding: 1rem 1.1rem; text-align: left; border-radius: 16px; border: 1.5px solid var(--borde); box-shadow: var(--sombra); }
+        .perfiles button[type=button]:hover { border-color: var(--azul); background: var(--azul-suave); }
+        .perfiles strong { display: block; font-size: 1.15rem; color: var(--texto); }
+        .perfiles small { display: block; margin-top: 0.25rem; font-size: 0.9rem; font-weight: 400; line-height: 1.4; color: var(--texto-suave); }
+        #cobros [data-total] { font-size: 2.2rem; font-weight: 700; letter-spacing: -0.02em; }
+        #cobros [data-movimientos] { margin: 0; padding: 0; }
+        #cobros .tarjeta:has([data-movimientos]:empty) { display: none; }
+        #cobros [data-movimientos] li { list-style: none; padding: 0.75rem 0; border-bottom: 1px solid var(--borde); }
+        #cobros [data-movimientos] li:last-child { border-bottom: 0; }
+        #cobros progress { margin: 0.25rem 0 0; }
+        .herramientas { margin-top: 1rem; padding: 1.25rem 16px 2rem; border-top: 1px solid var(--borde); text-align: center; color: var(--texto-suave); }
+
+        .dos-columnas { display: grid; gap: 1rem; align-items: start; }
+        .dos-columnas > * { min-width: 0; }
+        .resumen { position: sticky; bottom: calc(var(--alto-barra-abajo) + env(safe-area-inset-bottom)); z-index: 2; margin: 0 -4px; padding: 1rem; border-radius: 16px; background: var(--superficie); border: 1px solid var(--borde); box-shadow: 0 -6px 20px rgba(17, 24, 39, 0.08); }
+        .resumen .nota { display: flex; gap: 0.5rem; align-items: flex-start; font-size: 0.9rem; color: var(--texto-suave); margin: 0.75rem 0 0; }
+        .resumen .nota svg { width: 18px; height: 18px; flex: none; margin-top: 2px; }
+        .resumen button { margin: 0; }
+        .resumen [data-aviso] { margin-bottom: 0.75rem; }
+        #cliente:has([data-rapidos]:not([hidden])) .resumen .nota { display: none; }
+        @media (min-width: 900px) {
+            .dos-columnas { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 1.5rem; }
+            .dos-columnas.iguales { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+            .resumen { top: 88px; bottom: auto; margin: 0; box-shadow: var(--sombra); }
+        }
+
+        [data-aviso], [data-aviso-retiro] {
+            padding: 0.9rem 1.1rem; border-radius: 12px; font-size: 1rem; font-weight: 500;
+            border: 1px solid #F5D9A8; background: var(--atencion-suave); color: var(--texto);
+        }
+        [data-resultado] {
+            padding: 0.9rem 1.1rem; border-radius: 12px; font-size: 1.05rem; font-weight: 600;
+            border: 1px solid #F5C2C2; background: var(--error-suave); color: var(--texto);
+        }
+        [data-resultado][data-entregado="true"] { border-color: #A7E3C9; background: var(--exito-suave); }
+        .aviso-azul { padding: 0.9rem 1.1rem; border-radius: 12px; background: var(--azul-suave); color: var(--texto); font-size: 1rem; }
+        .rotulo { font-size: 0.9rem; font-weight: 500; color: var(--texto-suave); margin: 0; }
+        #cliente [data-vendedor] { font-size: 1.35rem; font-weight: 700; color: var(--texto); margin-bottom: 1rem; }
+        #cliente [data-total] { font-size: 1.15rem; font-weight: 700; color: var(--texto); margin: 0 0 0.75rem; }
+        @media (min-width: 900px) { #cliente [data-total] { font-size: 1.4rem; } }
+        #cliente [data-total]:empty { display: none; }
+        #recibo [data-estado] { font-size: 1.25rem; font-weight: 700; margin-bottom: 0.25rem; }
+        #recibo [data-total] { font-size: 2.4rem; font-weight: 700; letter-spacing: -0.02em; margin: 0.25rem 0 0.75rem; }
+        #recibo [data-destinos] { margin: 0; padding-left: 1.2rem; font-size: 1.05rem; }
+        #recibo > .tarjeta ~ p { max-width: 720px; font-size: 0.95rem; color: var(--texto-suave); }
+        #recibo > details { max-width: 720px; padding: 0.75rem 1.25rem; border: 1px solid var(--borde); border-radius: 16px; background: var(--superficie); }
+        #recibo > details summary { min-height: 44px; display: flex; align-items: center; font-weight: 600; color: var(--azul); }
+        #recibo > details ul { font-size: 0.95rem; }
+        #recibo > details code { font-size: 0.85rem; word-break: break-all; }
+        #vendedor .qr { text-align: center; }
+        #vendedor .qr:has(img[data-qr]:not([src])) { display: none; }
+        #vendedor img { display: block; width: 100%; max-width: 280px; height: auto; margin: 0 auto 0.75rem; border-radius: 12px; padding: 10px; background: #FFFFFF; border: 1px solid var(--borde); }
+        #vendedor [data-nombre], #vendedor [data-qr-nombre] { font-size: 1.25rem; font-weight: 700; }
+        #vendedor .qr small { color: var(--texto-suave); word-break: break-all; }
+        #vendedor [data-saldo] { font-size: 2.2rem; font-weight: 700; letter-spacing: -0.02em; }
+        #remitente [data-cotizacion] p { font-size: 1.1rem; margin-bottom: 0.5rem; }
+        #remitente [data-cobra], #remitente [data-llega] { font-size: 1.5rem; }
 
         /* Celular básico simulado (pestaña Celular). */
-        .telefono { max-width: 360px; margin: 0 auto; padding: 14px; border-radius: 28px; background: #1f2a1f; }
-        .pantalla { height: 340px; overflow-y: auto; padding: 10px; border-radius: 10px; background: #c7d6b6; color: #1b2a1b; font-family: ui-monospace, Menlo, monospace; font-size: 0.85rem; }
-        .pantalla .vacio { opacity: 0.7; }
-        .sms { max-width: 85%; margin-bottom: 8px; padding: 6px 8px; border-radius: 8px; white-space: pre-line; }
+        .telefono { max-width: 380px; margin: 0 auto; padding: 14px; border-radius: 32px; background: #1F2937; }
+        .pantalla { height: 380px; overflow-y: auto; padding: 12px; border-radius: 14px; background: #c7d6b6; color: #1b2a1b; font-family: Arial, Helvetica, sans-serif; font-size: 1.05rem; line-height: 1.5; }
+        .pantalla .vacio { color: #1b2a1b; }
+        .sms { max-width: 90%; margin-bottom: 10px; padding: 8px 10px; border-radius: 10px; white-space: pre-line; }
         .sms p { margin: 0; }
-        .sms small { display: block; margin-top: 2px; opacity: 0.65; font-size: 0.7rem; }
+        .sms small { display: block; margin-top: 4px; font-size: 0.85rem; color: #1b2a1b; }
         .sms.saliente { background: #e9f0df; }
         .sms.entrante { margin-left: auto; background: #9fb889; }
-        .telefono form { margin: 10px 0 0; }
-        .telefono .atajos { display: flex; gap: 6px; margin-bottom: 8px; }
-        .telefono .atajos button { flex: 1; margin: 0; padding: 4px; font-size: 0.8rem; color: #e9f0df; border-color: #9fb889; }
+        .telefono form { margin: 12px 0 0; }
+        .telefono .atajos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
+        .telefono .atajos button { margin: 0; padding: 4px; min-height: 52px; font-size: 0.95rem; background: #E5E7EB; color: var(--texto); border-color: #E5E7EB; }
         .telefono fieldset { margin: 0; }
+        .telefono fieldset input { margin-bottom: 8px; }
+
+        @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
     </style>
 </head>
 <body>
-    <header class="container">
-        <nav>
-            <ul>
-                <li><strong>La Cajita</strong></li>
-            </ul>
-            <ul>
-                <li><a href="#cliente">Cliente</a></li>
-                <li><a href="#recibo">Recibo</a></li>
-                <li><a href="#vendedor">Vendedor</a></li>
-                <li><a href="#remitente">Remitente</a></li>
-                <li><a href="#celular">Celular</a></li>
-                <li><a href="#cajero">Cajero</a></li>
-            </ul>
-        </nav>
+    <header class="barra">
+        <div class="contenedor">
+            <a class="marca" href="#">
+                <svg viewBox="0 0 40 40" aria-hidden="true"><rect width="40" height="40" rx="10" fill="#1D4ED8"/><path d="M10 17h20v13a2 2 0 0 1-2 2H12a2 2 0 0 1-2-2z" fill="#FFFFFF"/><path d="M8 13h24v4H8z" fill="#FFFFFF"/><path d="M17 21h6" stroke="#1D4ED8" stroke-width="2.5" stroke-linecap="round"/></svg>
+                La Cajita
+            </a>
+            <nav class="pestanas" aria-label="Pantallas de La Cajita">
+                <ul>
+                    <li hidden><a href="#cliente" data-pestana="cliente">Pagar</a></li>
+                    <li hidden><a href="#recibo" data-pestana="recibo">Recibo</a></li>
+                    <li hidden><a href="#vendedor" data-pestana="vendedor">Mi puesto</a></li>
+                    <li hidden><a href="#cobros" data-pestana="cobros">Mis cobros</a></li>
+                    <li hidden><a href="#remitente" data-pestana="remitente">Enviar dinero</a></li>
+                </ul>
+            </nav>
+            <p class="saludo" data-saludo></p>
+        </div>
     </header>
-    <main class="container">
+    <main class="contenedor">
+        <section id="perfil" hidden>
+            <h2>Entrar como…</h2>
+            <p class="ayuda">Perfiles de la demo, sin contraseña. Quien no tiene cuenta no se registra: todo le llega por SMS (mira la herramienta Celular).</p>
+            <div class="perfiles" data-perfiles></div>
+        </section>
+        <section id="cobros" hidden>
+            <h2>Mis cobros</h2>
+            <article class="tarjeta angosto">
+                <p class="rotulo">Te han llegado</p>
+                <p><strong data-total>$ 0</strong></p>
+                <p><small data-cuantos></small></p>
+            </article>
+            <div class="tarjeta angosto" data-deudas hidden>
+                <h3>Por vendedor</h3>
+                <div data-lista-deudas></div>
+            </div>
+            <div class="tarjeta angosto">
+                <ul data-movimientos></ul>
+            </div>
+            <p data-aviso class="angosto" role="alert" hidden></p>
+        </section>
         <section id="cliente" hidden>
-            <h2>Cliente</h2>
+            <h2>Pagar</h2>
             <p data-vendedor>Escanea el QR del vendedor para pagar.</p>
-            <form hidden>
-                <label>
-                    Monto
-                    <input name="monto" inputmode="decimal" placeholder="$ 3.000" autocomplete="off" required>
-                </label>
-                <fieldset data-propina hidden>
-                    <legend>Propina para los meseros</legend>
-                    <label><input type="radio" name="propina" value="0" checked> Sin propina</label>
-                    <label><input type="radio" name="propina" value="10"> 10 %</label>
-                    <label><input type="radio" name="propina" value="15"> 15 %</label>
-                    <label><input type="radio" name="propina" value="otro"> Otro valor</label>
-                    <input name="propinaOtra" inputmode="decimal" placeholder="$ 1.000" aria-label="Otro valor de propina" hidden>
-                </fieldset>
-                <label>
-                    Tu wallet address
-                    <input name="pagador" type="text" inputmode="url" spellcheck="false" autocapitalize="off" placeholder="https://ilp.interledger-test.dev/tu-wallet" autocomplete="off" required>
-                </label>
-                <label data-activar-rapidos>
-                    <input type="checkbox" name="pagosRapidos" role="switch">
-                    Pagos rápidos de barrio: aprueba una vez hasta <span data-tope></span> por semana y paga con un toque
-                </label>
-                <p data-total></p>
-                <button type="submit">Pagar</button>
+            <form class="dos-columnas" onsubmit="event.preventDefault()" hidden>
+                <div class="tarjeta">
+                    <label>
+                        ¿Cuánto vas a pagar?
+                        <small>Solo números. Ejemplo: 3000</small>
+                        <input name="monto" inputmode="decimal" autocomplete="off" required>
+                    </label>
+                    <fieldset data-propina hidden>
+                        <legend>¿Quieres dejar propina para los meseros?</legend>
+                        <div class="opciones en-fila">
+                            <label><input type="radio" name="propina" value="0" checked> No, gracias</label>
+                            <label><input type="radio" name="propina" value="10"> 10 %</label>
+                            <label><input type="radio" name="propina" value="15"> 15 %</label>
+                            <label><input type="radio" name="propina" value="otro"> Otro valor</label>
+                        </div>
+                        <input name="propinaOtra" inputmode="decimal" placeholder="Ejemplo: 1000" aria-label="¿Cuánto de propina?" hidden>
+                    </fieldset>
+                    <label>
+                        Tu billetera
+                        <small>La dirección de tu billetera. Ejemplo: https://ilp.interledger-test.dev/maria</small>
+                        <input name="pagador" type="text" inputmode="url" spellcheck="false" autocapitalize="off" autocomplete="off" required>
+                    </label>
+                    <label class="interruptor" data-activar-rapidos>
+                        <input type="checkbox" name="pagosRapidos" role="switch">
+                        <span>Pagos rápidos: apruebas una sola vez hasta <span data-tope></span> por semana y después pagas con un solo toque.</span>
+                    </label>
+                </div>
+                <aside class="resumen">
+                    <p data-aviso role="alert" hidden></p>
+                    <p data-total aria-live="polite"></p>
+                    <button type="submit">Pagar</button>
+                    <p class="nota"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Al tocar «Pagar», tu billetera te pedirá confirmar.</p>
+                </aside>
             </form>
-            <article data-rapidos hidden>
-                ⚡ Pagos rápidos activos: te quedan <strong data-restante></strong> de <span data-tope-activo></span> esta semana.
+            <article class="tarjeta" data-rapidos hidden>
+                <p>⚡ Pagos rápidos activos: te quedan <strong data-restante></strong> de <span data-tope-activo></span> esta semana.</p>
                 <button type="button" class="secondary outline" data-cancelar-rapidos>Cancelar pagos rápidos</button>
             </article>
-            <p data-aviso hidden></p>
         </section>
         <section id="recibo" hidden>
             <h2>Recibo</h2>
-            <p data-estado>Todavía no hay un pago para mostrar.</p>
-            <h3 data-total></h3>
-            <ul data-destinos></ul>
+            <p class="ayuda">Aquí ves si tu pago llegó.</p>
+            <div class="tarjeta angosto">
+                <p data-estado role="status">Todavía no hay un pago para mostrar.</p>
+                <h3 data-total></h3>
+                <ul data-destinos></ul>
+            </div>
         </section>
         <section id="vendedor" hidden>
-            <h2>Vendedor</h2>
+            <h2>Cobrar</h2>
 
-            <form data-configurar hidden>
-                <p>Configura tu reparto: una parte de cada venta le llega directo a tu proveedor hasta saldar lo que te fió.</p>
-                <label>Tu nombre <input name="vendedor" placeholder="Doña Rita" required></label>
+            <form class="tarjeta angosto" onsubmit="event.preventDefault()" data-configurar hidden>
+                <p>Antes de cobrar, cuéntanos unos datos. Una parte de cada venta le llega sola a tu proveedor hasta pagar lo que te fió.</p>
+                <label>
+                    Tu nombre
+                    <small>Así te verán tus clientes. Ejemplo: Doña Rita</small>
+                    <input name="vendedor" autocomplete="off" required>
+                </label>
                 <fieldset>
-                    <label><input type="radio" name="conCuenta" value="no" checked> No tengo cuenta: retiro en efectivo con PIN</label>
-                    <label><input type="radio" name="conCuenta" value="si"> Tengo cuenta: me llega directo a mi wallet</label>
+                    <legend>¿Cómo quieres recibir tu dinero?</legend>
+                    <div class="opciones">
+                        <label><input type="radio" name="conCuenta" value="no" checked> No tengo cuenta: lo saco en efectivo con un PIN</label>
+                        <label><input type="radio" name="conCuenta" value="si"> Tengo billetera: me llega directo</label>
+                    </div>
                 </fieldset>
                 <div data-sin-cuenta class="grid">
-                    <label>Cédula <input name="cedula" inputmode="numeric" placeholder="1020304050"></label>
-                    <label>Celular <input name="celular" inputmode="tel" placeholder="3001234567"></label>
-                </div>
-                <label data-con-cuenta hidden>Tu wallet address <input name="walletVendedor" type="text" inputmode="url" spellcheck="false" autocapitalize="off" placeholder="https://ilp.interledger-test.dev/tu-wallet"></label>
-                <label>Wallet de tu proveedor <input name="proveedorWallet" type="text" inputmode="url" spellcheck="false" autocapitalize="off" placeholder="https://ilp.interledger-test.dev/proveedor" required></label>
-                <div class="grid">
-                    <label>% para el proveedor <input name="porcentaje" type="number" min="1" max="100" value="35" required></label>
-                    <label>Deuda a saldar (opcional) <input name="deuda" inputmode="decimal" placeholder="$ 40.000"></label>
-                </div>
-                <button type="submit">Crear mi reparto</button>
-            </form>
-
-            <div data-panel hidden>
-                <article>
-                    <header><strong data-nombre>Mi cajita</strong></header>
-                    <p>Hoy llevas <strong data-saldo>$ 0</strong> · <span data-ventas>0</span> ventas</p>
-                    <p>
-                        Proveedor: <span data-pagado>$ 0</span> / <span data-deuda>$ 0</span> <span data-saldada hidden>✔ deuda saldada</span>
-                        <progress data-barra value="0" max="1"></progress>
-                    </p>
-                    <button type="button" data-retirar>Retirar todo en efectivo</button>
-                    <p data-aviso-retiro hidden></p>
-                </article>
-            </div>
-
-            <h3>QR del puesto</h3>
-            <p data-qr-nombre>QR del puesto</p>
-            <img data-qr alt="QR para pagar en este puesto" width="260" height="260">
-            <p><small>Lleva a: <a data-enlace></a></small></p>
-
-            <details data-personalizado hidden>
-                <summary>Generar QR personalizado (monto, meseros, vigencia)</summary>
-                <form>
-                    <div class="grid">
-                        <label>Monto (opcional) <input name="monto" inputmode="decimal" placeholder="$ 9.000"></label>
-                        <label>Descripción (opcional) <input name="descripcion" placeholder="3 empanadas"></label>
-                    </div>
                     <label>
-                        Wallets de los meseros (opcional, una por línea): la propina se reparte entre ellos
-                        <textarea name="meseros" rows="2" placeholder="https://ilp.interledger-test.dev/mesero1"></textarea>
+                        Tu cédula
+                        <small>Solo números. Ejemplo: 1020304050</small>
+                        <input name="cedula" inputmode="numeric" autocomplete="off">
                     </label>
                     <label>
-                        Vigencia (opcional)
+                        Tu celular
+                        <small>Aquí te llega el PIN. Ejemplo: 3001234567</small>
+                        <input name="celular" inputmode="tel" autocomplete="off">
+                    </label>
+                </div>
+                <label data-con-cuenta hidden>
+                    Tu billetera
+                    <small>Ejemplo: https://ilp.interledger-test.dev/rita</small>
+                    <input name="walletVendedor" type="text" inputmode="url" spellcheck="false" autocapitalize="off" autocomplete="off">
+                </label>
+                <label>
+                    Billetera de tu proveedor
+                    <small>Ejemplo: https://ilp.interledger-test.dev/proveedor</small>
+                    <input name="proveedorWallet" type="text" inputmode="url" spellcheck="false" autocapitalize="off" autocomplete="off" required>
+                </label>
+                <div class="grid">
+                    <label>
+                        ¿Qué parte de cada venta va al proveedor? (%)
+                        <small>35 quiere decir 35 pesos de cada 100.</small>
+                        <input name="porcentaje" type="number" min="1" max="100" value="35" required>
+                    </label>
+                    <label>
+                        ¿Cuánto le debes? (opcional)
+                        <small>Si no le debes nada, déjalo vacío. Ejemplo: 40000</small>
+                        <input name="deuda" inputmode="decimal" autocomplete="off">
+                    </label>
+                </div>
+                <button type="submit">Guardar y ver mi código QR</button>
+            </form>
+
+            <div class="dos-columnas iguales">
+                <div data-panel hidden>
+                    <article class="tarjeta">
+                        <p><strong data-nombre>Mi cajita</strong></p>
+                        <p class="rotulo">Hoy llevas</p>
+                        <p><strong data-saldo>$ 0</strong><br>en <span data-ventas>0</span> ventas</p>
+                        <p>
+                            Tu proveedor ya recibió <strong data-pagado>$ 0</strong> de <strong data-deuda>$ 0</strong>
+                            <span data-saldada hidden><br>✔ Ya le pagaste toda la deuda</span>
+                            <progress data-barra value="0" max="1" aria-label="Lo que ya le pagaste al proveedor"></progress>
+                        </p>
+                        <button type="button" data-retirar>Retirar todo en efectivo</button>
+                        <p data-aviso-retiro role="status" hidden></p>
+                    </article>
+                </div>
+
+                <div class="tarjeta qr">
+                    <p data-qr-nombre>QR del puesto</p>
+                    <p class="ayuda" style="margin-inline: auto;">Muéstrale este código a tu cliente. Lo escanea con la cámara de su celular y te paga.</p>
+                    <img data-qr alt="Código QR para pagarle a este puesto" width="280" height="280">
+                    <p><small>Si el cliente no puede escanear, que abra: <a data-enlace></a></small></p>
+                </div>
+            </div>
+
+            <p data-aviso role="alert" hidden></p>
+
+            <details class="tarjeta" data-personalizado hidden>
+                <summary>Crear un QR con monto fijo, propina o fecha de vencimiento</summary>
+                <form onsubmit="event.preventDefault()">
+                    <div class="grid">
+                        <label>
+                            Monto (opcional)
+                            <small>Si lo pones, el QR sirve para un solo pago. Ejemplo: 9000</small>
+                            <input name="monto" inputmode="decimal" autocomplete="off">
+                        </label>
+                        <label>
+                            ¿Qué vendes? (opcional)
+                            <small>Ejemplo: 3 empanadas</small>
+                            <input name="descripcion" autocomplete="off">
+                        </label>
+                    </div>
+                    <label>
+                        Billeteras de los meseros (opcional)
+                        <small>Una por línea. La propina se reparte en partes iguales entre ellos.</small>
+                        <textarea name="meseros" rows="2" spellcheck="false" autocapitalize="off"></textarea>
+                    </label>
+                    <label>
+                        ¿Hasta cuándo sirve? (opcional)
                         <select name="vigencia">
-                            <option value="">Sin vigencia</option>
+                            <option value="">Siempre</option>
                             <option value="hoy">Hasta el final del día</option>
                             <option value="turno">Un turno (8 horas)</option>
                             <option value="fecha">Hasta una fecha…</option>
                         </select>
                     </label>
-                    <label data-fecha hidden>Vence <input name="vigenteHasta" type="datetime-local"></label>
-                    <button type="submit">Generar QR</button>
+                    <label data-fecha hidden>Fecha y hora en que vence <input name="vigenteHasta" type="datetime-local"></label>
+                    <button type="submit">Crear QR</button>
                 </form>
-                <div data-qr-nuevo hidden>
-                    <img alt="QR personalizado" width="220" height="220">
-                    <p><small data-qr-detalle></small><br><small>Lleva a: <a data-enlace-nuevo></a></small></p>
+                <div class="qr" data-qr-nuevo hidden>
+                    <img alt="Código QR nuevo" width="260" height="260">
+                    <p><small data-qr-detalle></small><br><small>Si el cliente no puede escanear, que abra: <a data-enlace-nuevo></a></small></p>
                 </div>
             </details>
 
-            <p><small><a href="#vendedor?reparto=nuevo" data-cambiar hidden>Configurar otro reparto</a></small></p>
-            <p data-aviso hidden></p>
+            <p><a href="#vendedor?reparto=nuevo" data-cambiar hidden>Configurar otro reparto</a></p>
         </section>
         <section id="remitente" hidden>
             <h2>Enviar dinero</h2>
-            <p>Manda una remesa a tu familia solo con su celular y su cédula. Sin cuenta, la retira en efectivo en cualquier corresponsal.</p>
-            <form data-cotizar>
-                <label>Tu nombre (lo verá en el SMS) <input name="nombre" placeholder="Carlos" autocomplete="off"></label>
-                <label>Tu wallet address <input name="remitente" type="text" inputmode="url" spellcheck="false" autocapitalize="off" placeholder="https://ilp.interledger-test.dev/tu-wallet" autocomplete="off" required></label>
+            <p class="ayuda">Mándale dinero a tu familia solo con su celular y su cédula. Si no tiene cuenta, lo saca en efectivo en un corresponsal.</p>
+            <form class="tarjeta angosto" onsubmit="event.preventDefault()" data-cotizar>
+                <label>
+                    Tu nombre
+                    <small>Tu familiar lo verá en el mensaje. Ejemplo: Carlos</small>
+                    <input name="nombre" autocomplete="off">
+                </label>
+                <label>
+                    Tu billetera
+                    <small>Ejemplo: https://ilp.interledger-test.dev/carlos</small>
+                    <input name="remitente" type="text" inputmode="url" spellcheck="false" autocapitalize="off" autocomplete="off" required>
+                </label>
                 <fieldset>
-                    <label><input type="radio" name="conCuenta" value="no" checked> Mi familiar no tiene cuenta: retira en efectivo</label>
-                    <label><input type="radio" name="conCuenta" value="si"> Mi familiar tiene cuenta: le llega a su wallet</label>
+                    <legend>¿Tu familiar tiene cuenta?</legend>
+                    <div class="opciones">
+                        <label><input type="radio" name="conCuenta" value="no" checked> No tiene cuenta: lo saca en efectivo</label>
+                        <label><input type="radio" name="conCuenta" value="si"> Tiene billetera: le llega directo</label>
+                    </div>
                 </fieldset>
                 <div data-sin-cuenta class="grid">
-                    <label>Celular de quien recibe <input name="celular" inputmode="tel" placeholder="3001234567"></label>
-                    <label>Cédula de quien recibe <input name="cedula" inputmode="numeric" placeholder="1020304050"></label>
+                    <label>
+                        Celular de quien recibe
+                        <small>Ejemplo: 3001234567</small>
+                        <input name="celular" inputmode="tel" autocomplete="off">
+                    </label>
+                    <label>
+                        Cédula de quien recibe
+                        <small>Solo números. Ejemplo: 1020304050</small>
+                        <input name="cedula" inputmode="numeric" autocomplete="off">
+                    </label>
                 </div>
-                <label data-con-cuenta hidden>Wallet de quien recibe <input name="destinatarioWallet" type="text" inputmode="url" spellcheck="false" autocapitalize="off" placeholder="https://ilp.interledger-test.dev/su-wallet"></label>
-                <label>Monto a enviar, en tu moneda <input name="monto" inputmode="decimal" placeholder="50" required></label>
-                <button type="submit">Ver cuánto llega</button>
+                <label data-con-cuenta hidden>
+                    Billetera de quien recibe
+                    <small>Ejemplo: https://ilp.interledger-test.dev/mama</small>
+                    <input name="destinatarioWallet" type="text" inputmode="url" spellcheck="false" autocapitalize="off" autocomplete="off">
+                </label>
+                <label>
+                    ¿Cuánto vas a enviar?
+                    <small>En tu moneda, solo números. Ejemplo: 50</small>
+                    <input name="monto" inputmode="decimal" autocomplete="off" required>
+                </label>
+                <button type="submit">Ver cuánto le llega</button>
             </form>
-            <article data-cotizacion hidden>
+            <article class="tarjeta angosto" data-cotizacion hidden>
                 <p>Te cobran <strong data-cobra></strong></p>
-                <p>Llegan <strong data-llega></strong> <span data-a-quien></span></p>
+                <p>Le llegan <strong data-llega></strong> <span data-a-quien></span></p>
                 <p><small data-tasa></small></p>
                 <div class="grid">
-                    <button type="button" data-enviar>Enviar</button>
+                    <button type="button" data-enviar>Enviar el dinero</button>
                     <button type="button" class="secondary outline" data-cambiar>Cambiar datos</button>
                 </div>
             </article>
-            <p data-aviso hidden></p>
+            <p data-aviso class="angosto" role="alert" hidden></p>
         </section>
         <section id="celular" hidden>
-            <h2>Celular</h2>
-            <form data-numero role="group">
-                <input name="numero" inputmode="tel" placeholder="Número de celular, p. ej. 3001234567" autocomplete="off" aria-label="Número de celular">
-                <button type="submit">Abrir</button>
-            </form>
-            <div class="telefono">
-                <div data-pantalla class="pantalla" hidden></div>
-                <form data-mensaje hidden>
-                    <div class="atajos">
-                        <button type="button" class="outline" data-atajo="1">1 SALDO</button>
-                        <button type="button" class="outline" data-atajo="2">2 RETIRAR</button>
-                        <button type="button" class="outline" data-atajo="MENU">MENU</button>
-                    </div>
-                    <fieldset role="group">
-                        <input name="texto" placeholder="Escribe un SMS" autocomplete="off" aria-label="Mensaje">
-                        <button type="submit">Enviar</button>
-                    </fieldset>
+            <h2>Mensajes</h2>
+            <p class="ayuda">Aquí llegan los mensajes de texto (SMS) de La Cajita.</p>
+            <div class="dos-columnas iguales">
+                <form class="tarjeta" onsubmit="event.preventDefault()" data-numero>
+                    <label>
+                        Número de celular
+                        <small>Ejemplo: 3001234567</small>
+                        <input name="numero" inputmode="tel" autocomplete="off">
+                    </label>
+                    <button type="submit">Ver mensajes</button>
                 </form>
+                <div class="telefono">
+                    <div data-pantalla class="pantalla" role="log" aria-live="polite" hidden></div>
+                    <form onsubmit="event.preventDefault()" data-mensaje hidden>
+                        <div class="atajos">
+                            <button type="button" data-atajo="1">1 · Saldo</button>
+                            <button type="button" data-atajo="2">2 · Retirar</button>
+                            <button type="button" data-atajo="MENU">Menú</button>
+                        </div>
+                        <fieldset>
+                            <input name="texto" placeholder="Escribe aquí tu mensaje" autocomplete="off" aria-label="Escribe aquí tu mensaje">
+                            <button type="submit">Enviar mensaje</button>
+                        </fieldset>
+                    </form>
+                </div>
             </div>
-            <p data-aviso hidden></p>
+            <p data-aviso role="alert" hidden></p>
         </section>
         <section id="cajero" hidden>
             <h2>Cajero</h2>
-            <p>Corresponsal: pide la cédula y el PIN que le llegó por SMS a quien retira. Se entrega siempre el saldo total.</p>
-            <form>
+            <p class="ayuda">Pídele a la persona su cédula y el PIN que le llegó por mensaje. Se entrega todo el dinero que tiene.</p>
+            <form class="tarjeta muy-angosto" onsubmit="event.preventDefault()">
                 <label>
-                    Cédula
-                    <input name="cedula" inputmode="numeric" placeholder="1020304050" autocomplete="off" required>
+                    Cédula de quien retira
+                    <small>Solo números. Ejemplo: 1020304050</small>
+                    <input name="cedula" inputmode="numeric" autocomplete="off" required>
                 </label>
                 <label>
-                    PIN
-                    <input name="pin" inputmode="numeric" placeholder="1234-5678" autocomplete="off" required>
+                    PIN que le llegó por mensaje
+                    <small>8 números. Ejemplo: 1234-5678</small>
+                    <input name="pin" inputmode="numeric" autocomplete="off" required>
                 </label>
-                <button type="submit">Validar y entregar</button>
+                <article data-resultado role="status" hidden></article>
+                <button type="submit">Revisar y entregar el dinero</button>
             </form>
-            <article data-resultado hidden></article>
         </section>
     </main>
+    <footer class="herramientas">
+        <small>Herramientas de la demo: <a href="#celular">Celular</a> · <a href="#cajero">Cajero (corresponsal)</a></small>
+    </footer>
+    <script src="js/perfil.js"></script>
     <script>
-        const pestanas = document.querySelectorAll('main > section');
+        const enlacesPestana = document.querySelectorAll('header [data-pestana]');
 
-        function mostrarPestana() {
-            const nombre = location.hash.slice(1).split('?')[0] || 'cliente';
-            pestanas.forEach((seccion) => {
-                seccion.hidden = seccion.id !== nombre;
+        function marcarPestana() {
+            const nombre = location.hash.slice(1).split('?')[0];
+            enlacesPestana.forEach((enlace) => {
+                if (enlace.dataset.pestana === nombre) enlace.setAttribute('aria-current', 'page');
+                else enlace.removeAttribute('aria-current');
             });
-            window.scrollTo(0, 0);
         }
 
-        window.addEventListener('hashchange', mostrarPestana);
-        mostrarPestana();
+        window.addEventListener('hashchange', marcarPestana);
+        marcarPestana();
     </script>
     <script type="module" src="js/cliente.js"></script>
     <script type="module" src="js/recibo.js"></script>
@@ -243,5 +551,6 @@
     <script type="module" src="js/celular.js"></script>
     <script type="module" src="js/cajero.js"></script>
     <script type="module" src="js/remitente.js"></script>
+    <script type="module" src="js/cobros.js"></script>
 </body>
 </html>

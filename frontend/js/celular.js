@@ -31,7 +31,7 @@ function pintar(mensajes) {
     if (mensajes.length === 0) {
         pantalla.replaceChildren(Object.assign(document.createElement('p'), {
             className: 'vacio',
-            textContent: 'Sin mensajes. Escribe MENU para empezar.'
+            textContent: 'Todavía no tienes mensajes. Toca «Menú» para empezar.'
         }));
         return;
     }
@@ -56,7 +56,7 @@ async function actualizar() {
         pintar(await respuesta.json());
         aviso.hidden = true;
     } catch (error) {
-        aviso.textContent = `No se pudo leer la bandeja: ${error.message}`;
+        aviso.textContent = `⚠ No pudimos mostrar tus mensajes. Intenta otra vez. (${error.message})`;
         aviso.hidden = false;
     }
 }
@@ -89,6 +89,7 @@ alAbrirPestana('celular', (params) => {
 formNumero.addEventListener('submit', (evento) => {
     evento.preventDefault();
     abrir(formNumero.elements.numero.value);
+    if (numeroActual) document.querySelector('.telefono').scrollIntoView({ block: 'start' });
 });
 
 formMensaje.addEventListener('submit', async (evento) => {
@@ -108,7 +109,7 @@ formMensaje.addEventListener('submit', async (evento) => {
         campo.value = '';
         await actualizar();
     } catch (error) {
-        aviso.textContent = `No se pudo enviar: ${error.message}`;
+        aviso.textContent = `⚠ No pudimos enviar tu mensaje. Intenta otra vez. (${error.message})`;
         aviso.hidden = false;
     } finally {
         boton.disabled = false;

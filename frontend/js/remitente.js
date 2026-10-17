@@ -23,9 +23,13 @@ function recordarRemitente(valor) {
     try { localStorage.setItem('cajita.remitente', valor); } catch { /* sin almacenamiento */ }
 }
 
-// "50" o "50,25" → { value: "5000" | "5025", assetScale: 2 }. La moneda la pone el backend según la wallet.
+// "50", "50,25", "50.25" o "1.250,50" → { value: "5000" | "5025" | "125050", assetScale: 2 }. La moneda la pone el backend.
+// Un separador seguido de 1 o 2 dígitos al final es el decimal (quien envía desde afuera escribe "50.25"); los demás son de miles.
 function aMontoRemitente(texto) {
-    const limpio = String(texto).trim().replace(/\./g, '').replace(',', '.');
+    const crudo = String(texto).trim().replace(/[^\d.,]/g, '');
+    const decimal = /[.,](\d{1,2})$/.exec(crudo);
+    const entero = (decimal ? crudo.slice(0, decimal.index) : crudo).replace(/[.,]/g, '');
+    const limpio = decimal ? `${entero || '0'}.${decimal[1]}` : entero;
     const numero = Number(limpio);
     if (!limpio || !Number.isFinite(numero) || numero <= 0) return null;
     return { value: Math.round(numero * 100).toString(), assetScale: 2 };
@@ -57,18 +61,18 @@ formulario.addEventListener('submit', async (evento) => {
     const remitente = campos.remitente.value.trim().replace(/^\$/, 'https://');
     const monto = aMontoRemitente(campos.monto.value);
 
-    if (!remitente.startsWith('https://')) return mostrarAviso('Tu wallet address empieza por https:// o $.');
-    if (!monto) return mostrarAviso('Escribe un monto válido.');
+    if (!remitente.startsWith('https://')) return mostrarAviso('⚠ La dirección de tu billetera debe empezar por https:// o por $');
+    if (!monto) return mostrarAviso('⚠ Escribe cuánto vas a enviar, solo con números. Ejemplo: 50');
 
     const cuerpo = { remitente, monto };
     if (campos.nombre.value.trim()) cuerpo.nombreRemitente = campos.nombre.value.trim();
     if (conCuenta) {
         cuerpo.destinatarioWallet = campos.destinatarioWallet.value.trim().replace(/^\$/, 'https://');
-        if (!cuerpo.destinatarioWallet.startsWith('https://')) return mostrarAviso('La wallet de tu familiar empieza por https:// o $.');
+        if (!cuerpo.destinatarioWallet.startsWith('https://')) return mostrarAviso('⚠ La billetera de tu familiar debe empezar por https:// o por $');
     } else {
         cuerpo.celular = campos.celular.value.replace(/\D/g, '');
         cuerpo.cedula = campos.cedula.value.replace(/\D/g, '');
-        if (cuerpo.celular.length < 7 || !cuerpo.cedula) return mostrarAviso('Escribe el celular y la cédula de quien recibe.');
+        if (cuerpo.celular.length < 7 || !cuerpo.cedula) return mostrarAviso('⚠ Escribe el celular y la cédula de quien recibe.');
     }
     recordarRemitente(remitente);
 
@@ -80,17 +84,18 @@ formulario.addEventListener('submit', async (evento) => {
         seccion.querySelector('[data-cobra]').textContent = formatearMonto(cotizacionActual.cobra);
         seccion.querySelector('[data-llega]').textContent = formatearMonto(cotizacionActual.llega);
         seccion.querySelector('[data-a-quien]').textContent = conCuenta
-            ? 'a la wallet de tu familiar.'
-            : `a nombre de la cédula ${cuerpo.cedula}. Le avisamos por SMS al ${cuerpo.celular}.`;
+            ? 'a la billetera de tu familiar.'
+            : `a nombre de la cédula ${cuerpo.cedula}. Le avisamos con un mensaje al ${cuerpo.celular}.`;
         const tasa = Number(cotizacionActual.llega.value) / 10 ** cotizacionActual.llega.assetScale
             / (Number(cotizacionActual.cobra.value) / 10 ** cotizacionActual.cobra.assetScale);
         seccion.querySelector('[data-tasa]').textContent = cotizacionActual.cobra.assetCode === cotizacionActual.llega.assetCode
             ? 'Misma moneda: sin cambio.'
-            : `1 ${cotizacionActual.cobra.assetCode} ≈ ${tasa.toLocaleString('es-CO', { maximumFractionDigits: 2 })} ${cotizacionActual.llega.assetCode}, ya incluye lo que cobra la red.`;
+            : `Tasa efectiva: 1 ${cotizacionActual.cobra.assetCode} ≈ ${tasa.toLocaleString('es-CO', { maximumFractionDigits: 2 })} ${cotizacionActual.llega.assetCode}. `
+                + 'La diferencia es el cambio de moneda más la comisión de la red, y la pagas tú: a quien recibe le llega exactamente ese monto, sin descuentos.';
         formulario.hidden = true;
         cotizacion.hidden = false;
     } catch (error) {
-        mostrarAviso(`No se pudo cotizar: ${error.message}`);
+        mostrarAviso(`⚠ No pudimos calcular cuánto le llega. Intenta otra vez. (${error.message})`);
     } finally {
         boton.removeAttribute('aria-busy');
         boton.disabled = false;
@@ -108,8 +113,8 @@ botonEnviar.addEventListener('click', async () => {
         const { redirectUrl } = await enviarRemesa({ cotizacionId: cotizacionActual.cotizacionId });
         location.href = redirectUrl;   // pantalla de consentimiento de la wallet del remitente
     } catch (error) {
-        if (error.status === 410) volverAlFormulario();
-        mostrarAviso(`No se pudo enviar: ${error.message}`);
+        if (error.status === 404 || error.status === 409 || error.status === 410) volverAlFormulario();   // cotización inexistente, usada o vencida
+        mostrarAviso(`⚠ No pudimos enviar el dinero. Intenta otra vez. (${error.message})`);
     } finally {
         botonEnviar.removeAttribute('aria-busy');
         botonEnviar.disabled = false;

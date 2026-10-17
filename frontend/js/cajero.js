@@ -9,7 +9,7 @@ const resultado = seccion.querySelector('[data-resultado]');
 function mostrar(texto, entregado = false) {
     resultado.hidden = false;
     resultado.textContent = texto;
-    resultado.style.borderLeft = entregado ? '6px solid #2e7d32' : '';
+    resultado.dataset.entregado = entregado;
 }
 
 formulario.addEventListener('submit', async (evento) => {
@@ -26,7 +26,11 @@ formulario.addEventListener('submit', async (evento) => {
         for (let intento = 0; intento < 10; intento += 1) {
             const respuesta = await validarRetiro({ pin, cedula });
             if (respuesta.ok) {
-                mostrar(`✅ Entregado: ${formatearMonto(respuesta.monto)} en efectivo.`, true);
+                const comprobante = respuesta.outgoingPayment
+                    ? ` Comprobante Open Payments: …${respuesta.outgoingPayment.slice(-8)} (Custodia → Corresponsal). Comisión del corresponsal en la demo: $ 0.`
+                    : '';
+                mostrar(`✅ Entregado: ${formatearMonto(respuesta.monto)} en efectivo.${comprobante}`, true);
+                if (respuesta.outgoingPayment) resultado.title = respuesta.outgoingPayment;
                 formulario.reset();
                 return;
             }
@@ -39,7 +43,7 @@ formulario.addEventListener('submit', async (evento) => {
         }
         mostrar('⏳ El pago sigue en proceso. Vuelve a validar en un momento.');
     } catch (error) {
-        mostrar(`❌ No pudimos contactar el servicio: ${error.message}`);
+        mostrar(`❌ No pudimos revisar el retiro. Intenta otra vez. (${error.message})`);
     } finally {
         boton.removeAttribute('aria-busy');
         boton.disabled = false;

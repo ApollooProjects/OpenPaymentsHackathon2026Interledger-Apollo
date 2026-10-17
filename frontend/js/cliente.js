@@ -57,8 +57,8 @@ function tomarCompraPendiente() {
 
 const AVISOS_RAPIDOS = {
     activo: '⚡ Listo: pagos rápidos activos. Toca Pagar y sale sin volver a aprobar.',
-    rechazado: 'No aceptaste los pagos rápidos. Puedes pagar aprobando esta compra.',
-    fallido: 'No se pudieron activar los pagos rápidos. Puedes pagar aprobando esta compra.',
+    rechazado: 'No aceptaste los pagos rápidos. Puedes pagar igual: tu billetera te pedirá confirmar esta compra.',
+    fallido: '⚠ No pudimos activar los pagos rápidos. Puedes pagar igual: tu billetera te pedirá confirmar esta compra.',
 };
 
 function montoBase() {
@@ -172,7 +172,7 @@ seccion.querySelector('[data-cancelar-rapidos]').addEventListener('click', async
         await cancelarPermiso(idCliente());
         mostrarAviso('Cancelaste los pagos rápidos. La próxima compra te pedirá aprobación.');
     } catch (error) {
-        mostrarAviso(`No se pudieron cancelar los pagos rápidos: ${error.message}`);
+        mostrarAviso(`⚠ No pudimos cancelar los pagos rápidos. Intenta otra vez. (${error.message})`);
     }
     await cargarPermiso();
 });
@@ -183,17 +183,17 @@ formulario.addEventListener('submit', async (evento) => {
 
     const monto = montoBase();
     if (!monto) {
-        mostrarAviso('Escribe un monto válido.');
+        mostrarAviso('⚠ Escribe cuánto vas a pagar, solo con números. Ejemplo: 3000');
         return;
     }
     const propina = propinaElegida(monto);
     if (formulario.elements.propina.value === 'otro' && !bloquePropina.hidden && !propina) {
-        mostrarAviso('Escribe un valor de propina válido o elige otra opción.');
+        mostrarAviso('⚠ Escribe cuánto de propina, solo con números (ejemplo: 1000), o elige otra opción.');
         return;
     }
     const pagador = campoPagador.value.trim().replace(/^\$/, 'https://');
     if (!pagador.startsWith('https://')) {
-        mostrarAviso('Tu wallet address empieza por https:// o $.');
+        mostrarAviso('⚠ La dirección de tu billetera debe empezar por https:// o por $');
         return;
     }
     recordarPagador(pagador);
@@ -223,7 +223,7 @@ formulario.addEventListener('submit', async (evento) => {
             location.hash = `recibo?pago=${encodeURIComponent(respuesta.pagoId)}`;   // pagos rápidos: sin consentimiento
         }
     } catch (error) {
-        mostrarAviso(`No se pudo iniciar el pago: ${error.message}`);
+        mostrarAviso(`⚠ No pudimos iniciar el pago. Revisa la dirección de tu billetera e intenta otra vez. (${error.message})`);
     } finally {
         boton.removeAttribute('aria-busy');
         boton.disabled = false;
