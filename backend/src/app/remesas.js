@@ -52,7 +52,9 @@ async function destinoDeRemesa({ celular, cedula, destinatarioWallet, nombreRemi
     };
 }
 
-export async function cotizar({ remitente, nombreRemitente, celular, cedula, destinatarioWallet, monto } = {}) {
+// modo 'envio' (por defecto): monto es lo que sale, en la moneda de quien envía.
+// modo 'recibe': monto es lo que debe llegar exactamente, en la moneda de quien recibe (la comisión la paga quien envía).
+export async function cotizar({ remitente, nombreRemitente, celular, cedula, destinatarioWallet, monto, modo = 'envio' } = {}) {
     const walletRemitente = aUrl(remitente);
     if (!walletRemitente.startsWith('https://')) throw errorHttp(400, 'Falta la dirección de tu billetera');
     const valor = typeof monto === 'object' && monto !== null ? monto.value : monto;
@@ -60,10 +62,11 @@ export async function cotizar({ remitente, nombreRemitente, celular, cedula, des
         throw errorHttp(400, 'El monto debe ser un entero positivo en la unidad mínima (centavos)');
     }
     const nombre = String(nombreRemitente ?? '').trim() || null;
+    if (modo !== 'envio' && modo !== 'recibe') throw errorHttp(400, 'modo debe ser "envio" o "recibe"');
 
     // La red cobra una comisión casi fija (~1 EUR en el testnet): con menos de 2 unidades la cotización no alcanza.
     const wallet = await op.obtenerWallet(walletRemitente);
-    if (wallet.assetCode !== 'COP' && BigInt(valor) < 2n * 10n ** BigInt(wallet.assetScale)) {
+    if (modo === 'envio' && wallet.assetCode !== 'COP' && BigInt(valor) < 2n * 10n ** BigInt(wallet.assetScale)) {
         throw errorHttp(400, `El envío mínimo es 2 ${wallet.assetCode}`);
     }
 
@@ -73,7 +76,14 @@ export async function cotizar({ remitente, nombreRemitente, celular, cedula, des
         expiresAt: new Date(Date.now() + VIGENCIA_COBRO_MS).toISOString(),
         metadata: destino.metadata
     });
-    const cotizacion = await op.cotizar({ walletUrl: walletRemitente, cobroId: cobro.id, debito: { value: String(valor) } });
+    let cotizacion;
+    if (modo === 'recibe') {
+        const moneda = await op.obtenerWallet(destino.walletUrl);
+        const recibe = { value: String(valor), assetCode: moneda.assetCode, assetScale: moneda.assetScale };
+        cotizacion = await op.cotizar({ walletUrl: walletRemitente, cobroId: cobro.id, recibe });
+    } else {
+        cotizacion = await op.cotizar({ walletUrl: walletRemitente, cobroId: cobro.id, debito: { value: String(valor) } });
+    }
 
     const id = randomUUID();
     db.prepare(`

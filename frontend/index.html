@@ -609,9 +609,16 @@
                     </label>
                 </div>
                 <div data-paso="¿Cuánto envías?" hidden>
+                    <fieldset>
+                        <legend>¿Cómo quieres calcularlo?</legend>
+                        <div class="opciones">
+                            <label><input type="radio" name="modo" value="envio" checked> <span><strong>Quiero enviar un monto</strong><small>Escribes cuánto sale de tu billetera, en tu moneda.</small></span></label>
+                            <label><input type="radio" name="modo" value="recibe"> <span><strong>Quiero que reciba un monto exacto</strong><small>Escribes cuántos pesos le llegan. El cambio y la comisión los pagas tú.</small></span></label>
+                        </div>
+                    </fieldset>
                     <label>
-                        ¿Cuánto vas a enviar?
-                        <small>En tu moneda, solo números. Ejemplo: 50</small>
+                        <span data-monto-titulo>¿Cuánto vas a enviar?</span>
+                        <small data-monto-ayuda>En tu moneda, solo números. Ejemplo: 50</small>
                         <input name="monto" inputmode="decimal" autocomplete="off" required>
                     </label>
                     <label>

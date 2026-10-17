@@ -21,8 +21,9 @@ async function tokenQuote(authServer) {
 }
 
 // Cuánto se le debita a quien paga (en su moneda) y cuánto recibe el cobro (en la moneda del cobro).
-// Sin debito, el cobro debe tener monto fijo y la quote cubre lo que le falta.
-export async function cotizar({ walletUrl, cobroId, debito }) {
+// Con debito: "envío X" (debitAmount). Con recibe: "que reciba exactamente Y" (receiveAmount, en la moneda del cobro).
+// Sin ninguno, el cobro debe tener monto fijo y la quote cubre lo que le falta.
+export async function cotizar({ walletUrl, cobroId, debito, recibe }) {
     const wallet = await obtenerWallet(walletUrl);
     const op = await obtenerCliente();
     const quote = await op.quote.create(
@@ -31,7 +32,8 @@ export async function cotizar({ walletUrl, cobroId, debito }) {
             walletAddress: wallet.id,
             receiver: cobroId,
             method: 'ilp',
-            ...(debito && { debitAmount: montoDeWallet(wallet, debito) })
+            ...(debito && { debitAmount: montoDeWallet(wallet, debito) }),
+            ...(recibe && { receiveAmount: { value: String(recibe.value), assetCode: recibe.assetCode, assetScale: recibe.assetScale } })
         }
     );
     return { quoteId: quote.id, debito: quote.debitAmount, recibe: quote.receiveAmount, vence: quote.expiresAt ?? null };
