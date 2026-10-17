@@ -16,7 +16,11 @@ coverage/
 
 # Datos locales
 *.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite-journal
 *.db
+data/
 data/local/
 
 # Material interno del equipo / agentes

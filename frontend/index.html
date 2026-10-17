@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>La Cajita</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+</head>
+<body>
+    <header class="container">
+        <nav>
+            <ul>
+                <li><strong>La Cajita</strong></li>
+            </ul>
+            <ul>
+                <li><a href="#cliente">Cliente</a></li>
+                <li><a href="#recibo">Recibo</a></li>
+                <li><a href="#vendedor">Vendedor</a></li>
+                <li><a href="#remitente">Remitente</a></li>
+                <li><a href="#celular">Celular</a></li>
+                <li><a href="#cajero">Cajero</a></li>
+            </ul>
+        </nav>
+    </header>
+    <main class="container">
+        <section id="cliente" hidden><h2>Cliente</h2></section>
+        <section id="recibo" hidden><h2>Recibo</h2></section>
+        <section id="vendedor" hidden><h2>Vendedor</h2></section>
+        <section id="remitente" hidden><h2>Remitente</h2></section>
+        <section id="celular" hidden><h2>Celular</h2></section>
+        <section id="cajero" hidden><h2>Cajero</h2></section>
+    </main>
+    <script>
+        const pestanas = document.querySelectorAll('main > section');
+
+        function mostrarPestana() {
+            const nombre = location.hash.slice(1).split('?')[0] || 'cliente';
+            pestanas.forEach((seccion) => {
+                seccion.hidden = seccion.id !== nombre;
+            });
+        }
+
+        window.addEventListener('hashchange', mostrarPestana);
+        mostrarPestana();
+    </script>
+</body>
+</html>
