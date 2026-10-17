@@ -23,7 +23,7 @@ export function calcular({ total, extra = 0n, deuda, ahorro, personas = 0 }) {
     let aDeuda = 0n;
     if (deuda?.porcentaje) {
         aDeuda = (pago * BigInt(deuda.porcentaje)) / 100n;
-        const tope = deuda.falta ?? deuda.total;
+        const tope = valorDe(deuda.falta ?? deuda.total);
         if (tope != null && aDeuda > BigInt(tope)) aDeuda = BigInt(tope);
     }
     const aAhorro = ahorro?.porcentaje ? ((pago - aDeuda) * BigInt(ahorro.porcentaje)) / 100n : 0n;
@@ -31,6 +31,10 @@ export function calcular({ total, extra = 0n, deuda, ahorro, personas = 0 }) {
     const tuyo = pago - aDeuda - aAhorro + (personas > 0 ? 0n : BigInt(extra));
     return { aDeuda, aAhorro, cadaPersona, tuyo };
 }
+
+const enLista = (xs) => (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} y ${xs.at(-1)}` : xs[0] ?? '');
+// Los montos de la API llegan como { value, … }; los del borrador, como texto en centavos.
+const valorDe = (m) => (m == null ? null : typeof m === 'object' ? m.value : m);
 
 const chipsReglas = (reglas) => Object.keys(REGLAS).filter((k) => reglas?.[k])
     .map((k) => `<span class="chip">${esc(REGLAS[k].corto)}</span>`).join(' ');
@@ -65,7 +69,7 @@ export async function repartos({ raiz, api, vigente }) {
             <li><a class="fila" href="#/reparto/${encodeURIComponent(r.id)}">
                 <span class="ico entra">${icono('repartir')}</span>
                 <span class="cuerpo"><span class="titulo">${esc(r.nombre)}</span>
-                    <span class="sub">${esc(dinero(r.recibido))} en ${r.ventas ?? 0} ${r.ventas === 1 ? 'pago' : 'pagos'}</span>
+                    <span class="sub">${esc(dinero(r.paraTi ?? r.recibido))} para ti · ${r.ventas ?? 0} ${r.ventas === 1 ? 'pago' : 'pagos'}</span>
                     <span class="chips-fila">${chipsReglas(r.reglas)}</span></span>
                 ${icono('chevron', 'chev')}
             </a></li>`).join('')}
@@ -104,7 +108,7 @@ export async function recibido({ raiz, api, vigente }) {
             <li><button class="fila" type="button" data-i="${movimientos.indexOf(m)}">
                 <span class="ico entra">${icono(REGLAS[m.regla]?.ico ?? 'cobrar')}</span>
                 <span class="cuerpo"><span class="titulo">${esc(REGLA_RECIBIDA[m.regla] ?? 'Recibiste')}</span>
-                    <span class="sub">De «${esc(m.de)}» · ${esc(fechaCorta(m.fecha))}</span></span>
+                    <span class="sub">De «${esc(m.de)}»${m.persona && m.persona !== m.de ? ` de ${esc(m.persona)}` : ''} · ${esc(fechaCorta(m.fecha))}</span></span>
                 <span class="valor entra"><span class="oculto-visual">Recibiste</span>+ ${esc(dinero(m.monto))}</span>
             </button></li>`).join('')}
         </ul>`).join('');
@@ -118,6 +122,7 @@ export async function recibido({ raiz, api, vigente }) {
             </div>
             <dl class="datos">
                 <div><dt>Del reparto</dt><dd>${esc(m.de)}</dd></div>
+                ${m.persona && m.persona !== m.de ? `<div><dt>De parte de</dt><dd>${esc(m.persona)}</dd></div>` : ''}
                 <div><dt>Fecha</dt><dd>${esc(new Date(m.fecha).toLocaleString('es-CO', { dateStyle: 'long', timeStyle: 'short' }))}</dd></div>
             </dl>
             ${m.comprobante ? `<details class="comprobante"><summary>${icono('escudo', 'chev')}&nbsp; Comprobante de Open Payments</summary><p class="tecnico">${esc(m.comprobante)}</p></details>` : ''}
@@ -351,7 +356,8 @@ function filasVistaPrevia({ total, extra, reglas, moneda, usuario }) {
     const d = (valor) => esc(dinero(monto(valor, moneda)));
     const filas = [];
     if (reglas.deuda) filas.push([REGLAS.deuda.ico, 'A la deuda', aDolarIlp(reglas.deuda.wallet), c.aDeuda]);
-    personas.forEach((p) => filas.push([REGLAS.compartir.ico, p.nombre, 'Parte del extra', c.cadaPersona]));
+    personas.forEach((p) => filas.push([REGLAS.compartir.ico, p.nombre || aDolarIlp(p.wallet), p.porcentaje ? `${p.porcentaje} % del extra` : 'Parte del extra',
+        p.porcentaje ? (BigInt(extra) * BigInt(p.porcentaje)) / 100n : c.cadaPersona]));
     if (reglas.ahorro) filas.push([REGLAS.ahorro.ico, 'A tu ahorro', aDolarIlp(reglas.ahorro.wallet), c.aAhorro]);
     filas.push(['usuario', 'Para ti', usuario.tipo === 'efectivo' ? 'En efectivo, a tu cédula' : 'En tu billetera', c.tuyo]);
     return `<ul class="lista">${filas.map(([ico, titulo, sub, valor]) => `
@@ -380,13 +386,14 @@ function pasoRevisar(ctx, form) {
     const moneda = monedaDelUsuario(ctx.usuario);
     const cuerpo = cuerpoDelBorrador(moneda);
     const reglas = { deuda: cuerpo.deuda, compartir: cuerpo.compartir, ahorro: cuerpo.ahorro };
+    const conExtra = Boolean(reglas.compartir); // el ejemplo suma un extra del 10 % solo si hay con quién compartirlo
     form.innerHTML = `
         <section class="tarjeta">
             <h2 style="margin:0 0 4px">${esc(b.nombre)}</h2>
-            <p class="suave" id="frase">${esc(frasePrevia({ total: EJEMPLO, extra: EXTRA, reglas, moneda }))}</p>
+            <p class="suave" id="frase">${esc(frasePrevia({ total: EJEMPLO, extra: conExtra ? EXTRA : 0n, reglas, moneda }))}</p>
             <div class="campo" style="margin-bottom:12px"><label for="ejemplo">Prueba con otro monto</label>
                 <div class="con-prefijo"><span class="prefijo" aria-hidden="true">$</span><input class="entrada" id="ejemplo" inputmode="numeric" autocomplete="off" value="10.000"></div></div>
-            <div id="filas" aria-live="polite">${filasVistaPrevia({ total: EJEMPLO, extra: EXTRA, reglas, moneda, usuario: ctx.usuario })}</div>
+            <div id="filas" aria-live="polite">${filasVistaPrevia({ total: EJEMPLO, extra: conExtra ? EXTRA : 0n, reglas, moneda, usuario: ctx.usuario })}</div>
             ${reglas.deuda ? `<p class="suave chico" style="margin:12px 0 0">Cuando completes los ${esc(dinero(monto(reglas.deuda.total, moneda)))} de la deuda, deja de descontarse.</p>` : ''}
         </section>
         <span class="mensaje-error" id="error" aria-live="polite"></span>
@@ -398,7 +405,7 @@ function pasoRevisar(ctx, form) {
     formatearCampoMonto(campo);
     campo.addEventListener('input', () => {
         const total = BigInt(aUnidadMinima(campo.value, moneda.assetScale) ?? 0);
-        const extra = total / 10n;
+        const extra = conExtra ? total / 10n : 0n;
         form.querySelector('#filas').innerHTML = filasVistaPrevia({ total, extra, reglas, moneda, usuario: ctx.usuario });
         form.querySelector('#frase').textContent = frasePrevia({ total, extra, reglas, moneda });
     });
@@ -431,21 +438,26 @@ export async function detalle(ctx, id) {
     }
     const moneda = { assetCode: r.recibido?.assetCode ?? 'COP', assetScale: r.recibido?.assetScale ?? 2 };
     const { deuda, compartir, ahorro } = r.reglas ?? {};
-    const pagado = deuda ? BigInt(deuda.pagado ?? 0) : 0n;
-    const totalDeuda = deuda ? BigInt(deuda.total ?? 0) : 0n;
+    const monedaDeuda = deuda?.total?.assetCode ? { assetCode: deuda.total.assetCode, assetScale: deuda.total.assetScale } : moneda;
+    const sinDatoDeuda = deuda && (deuda.pagado == null || deuda.falta == null);
+    const pagado = deuda ? BigInt(valorDe(deuda.pagado) ?? 0) : 0n;
+    const falta = deuda ? BigInt(valorDe(deuda.falta) ?? 0) : 0n;
+    const totalDeuda = deuda ? BigInt(valorDe(deuda.total) ?? 0) : 0n;
     const avance = totalDeuda > 0n ? Number((pagado * 100n) / totalDeuda) : 0;
+    const dd = (v) => esc(dinero(monto(v, monedaDeuda)));
     raiz.innerHTML = `
         <div class="encabezado">${atras('#/repartos', 'Volver a repartos')}<h1>${esc(r.nombre)}</h1></div>
         <div class="cifras">
-            <div class="tarjeta"><span class="suave chico">Recibido</span><strong>${esc(dinero(r.recibido))}</strong></div>
-            <div class="tarjeta"><span class="suave chico">Pagos</span><strong>${r.ventas ?? 0}</strong></div>
+            <div class="tarjeta"><span class="suave chico">Recibido</span><strong>${esc(dinero(r.recibido))}</strong><span class="suave chico">en ${r.ventas ?? 0} ${r.ventas === 1 ? 'pago' : 'pagos'}</span></div>
+            <div class="tarjeta"><span class="suave chico">Para ti</span><strong>${esc(dinero(r.paraTi ?? r.recibido))}</strong><span class="suave chico">${usuario.tipo === 'efectivo' ? 'En efectivo' : 'En tu billetera'}</span></div>
         </div>
         ${deuda ? `
         <section class="tarjeta" aria-labelledby="titulo-deuda" style="margin-top:16px">
             <h2 id="titulo-deuda" style="font-size:1.05rem">${icono(REGLAS.deuda.ico, 'ico-titulo')} Deuda · ${esc(deuda.porcentaje)} % de cada pago</h2>
-            <div class="barra-avance" role="progressbar" aria-label="Avance de la deuda" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${avance}" aria-valuetext="Pagado ${esc(dinero(monto(pagado, moneda)))} de ${esc(dinero(monto(totalDeuda, moneda)))}"><span style="width:${avance}%"></span></div>
-            <div class="avance-pie"><span><strong>${esc(dinero(monto(pagado, moneda)))}</strong> pagado</span><span>Falta <strong>${esc(dinero(monto(deuda.falta ?? 0, moneda)))}</strong></span></div>
-            ${BigInt(deuda.falta ?? 0) === 0n ? '<p class="chip ok" style="margin-top:10px">¡Deuda completa! Ya no se descuenta.</p>' : ''}
+            ${sinDatoDeuda ? `<p class="suave" style="margin:8px 0 0">Total ${dd(totalDeuda)}. No pudimos consultar cuánto llevas pagado; inténtalo en un momento.</p>` : `
+            <div class="barra-avance" role="progressbar" aria-label="Avance de la deuda" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${avance}" aria-valuetext="Pagado ${dd(pagado)} de ${dd(totalDeuda)}"><span style="width:${avance}%"></span></div>
+            <div class="avance-pie"><span><strong>${dd(pagado)}</strong> pagado de ${dd(totalDeuda)}</span><span>Falta <strong>${dd(falta)}</strong></span></div>
+            ${falta === 0n ? '<p class="chip ok" style="margin-top:10px">¡Deuda completa! Ya no se descuenta.</p>' : ''}`}
         </section>` : ''}
         <section class="tarjeta centro" style="margin-top:16px">
             <div class="qr-caja" id="qr" role="img" aria-label="Código QR del reparto ${esc(r.nombre)}">${qrSvg(r.qr.enlace, r.qr.id)}</div>
@@ -457,8 +469,8 @@ export async function detalle(ctx, id) {
         </div>
         <section class="seccion" aria-labelledby="titulo-reglas">
             <h2 id="titulo-reglas" class="grupo-fecha" style="margin-top:0">Así se reparte un pago de ${esc(dinero(monto(EJEMPLO, moneda)))}</h2>
-            ${filasVistaPrevia({ total: EJEMPLO, extra: compartir ? EXTRA : 0n, reglas: { deuda: deuda && { ...deuda }, compartir, ahorro }, moneda, usuario })}
-            ${compartir ? `<p class="suave chico" style="margin-top:8px">Con ${esc(dinero(monto(EXTRA, moneda)))} de extra, que se divide entre ${compartir.personas.map((p) => esc(p.nombre)).join(', ')}.</p>` : ''}
+            ${filasVistaPrevia({ total: EJEMPLO, extra: compartir ? EXTRA : 0n, reglas: { deuda: deuda && (sinDatoDeuda ? { ...deuda, falta: deuda.total } : deuda), compartir, ahorro }, moneda, usuario })}
+            ${compartir ? `<p class="suave chico" style="margin-top:8px">Con ${esc(dinero(monto(EXTRA, moneda)))} de extra, que se divide entre ${esc(enLista(compartir.personas.map((p) => p.nombre || aDolarIlp(p.wallet))))}.</p>` : ''}
         </section>`;
 
     let actual = r.qr;

@@ -9,7 +9,7 @@ const monedaDe = (pagador) => monedaGuardada(pagador) ?? { assetCode: 'COP', ass
 export const textoTope = (pagador, valor = TOPES[0]) => dinero({ value: valor, ...monedaDe(pagador) });
 
 export async function estado(api, usuario) {
-    try { return await api.estadoUnToque(usuario.id); } catch { return { activo: false, estado: 'sin_permiso' }; }
+    try { return await api.estadoUnToque(); } catch { return { activo: false, estado: 'sin_permiso' }; }
 }
 
 const fechaLarga = (iso) => new Date(iso).toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -48,7 +48,7 @@ export function activar({ api, usuario }, { pagador, alTerminar } = {}) {
         try { ventana = window.open('', '_blank'); } catch { /* sin ventana nueva */ }
         await conEspera(boton, async () => {
             try {
-                const { redirectUrl } = await api.activarUnToque(usuario.id, pagador, elegido);
+                const { redirectUrl } = await api.activarUnToque(elegido);
                 if (ventana && !ventana.closed) ventana.location.href = redirectUrl;
                 else { location.href = redirectUrl; return; }
                 hoja.close();
@@ -80,6 +80,13 @@ function esperarRespuesta({ api, usuario }, alTerminar) {
 export async function seccionPerfil(ctx, contenedor) {
     const { api, usuario, vigente } = ctx;
     const pagador = usuario.wallet;
+    // Al volver de la billetera llega /#/perfil?unToque=<estado>.
+    const vuelta = new URLSearchParams(location.hash.split('?')[1] ?? '').get('unToque');
+    if (vuelta) {
+        history.replaceState(null, '', '#/perfil');
+        if (vuelta === 'activo') toast('Listo: pagos con un toque activados');
+        else toast('No se activaron los pagos con un toque', { tipo: 'error' });
+    }
     const pintar = async () => {
         const e = await estado(api, usuario);
         if (!vigente()) return;
@@ -103,7 +110,7 @@ export async function seccionPerfil(ctx, contenedor) {
                 const boton = hoja.querySelector('#confirmar');
                 boton.addEventListener('click', () => conEspera(boton, async () => {
                     try {
-                        await api.cancelarUnToque(usuario.id);
+                        await api.cancelarUnToque();
                         hoja.close();
                         toast('Pagos con un toque desactivados');
                         pintar();

@@ -1,7 +1,7 @@
 // Inicio, movimientos (lista y detalle con comprobante de Open Payments) y perfil.
 import { icono } from './iconos.js';
 import * as unToque from './un-toque.js';
-import { esc, dinero, fechaCorta, grupoDeFecha, horaRestante, enmascarar, celularBonito, abrirHoja, conEspera, toast, copiar } from './ui.js';
+import { nombreDestino, esc, dinero, fechaCorta, grupoDeFecha, horaRestante, enmascarar, celularBonito, abrirHoja, conEspera, toast, copiar } from './ui.js';
 
 let ultimoResumen = null;
 
@@ -130,7 +130,7 @@ export function comprobanteHtml(pago) {
     if (!pago) return '';
     const filas = (pago.destinos ?? []).map((d) => `
         <div class="tarjeta" style="padding:14px;box-shadow:none;margin-top:10px">
-            <p style="margin:0 0 6px"><strong>${esc(d.nombre ?? 'Destino')}</strong> · ${esc(dinero(d.monto))} ${d.completo ? chipEstado('completado') : d.fallido ? chipEstado('fallido') : chipEstado('procesando')}</p>
+            <p style="margin:0 0 6px"><strong>${esc(nombreDestino(d.nombre) || 'Destino')}</strong> · ${esc(dinero(d.monto))} ${d.completo ? chipEstado('completado') : d.fallido ? chipEstado('fallido') : chipEstado('procesando')}</p>
             ${d.walletUrl ? `<p class="tecnico" style="margin:0">Billetera: ${esc(d.walletUrl)}</p>` : ''}
             ${d.incomingPayment ? `<p class="tecnico" style="margin:0">Incoming payment: ${esc(d.incomingPayment)}</p>` : ''}
             ${d.outgoingPayment ? `<p class="tecnico" style="margin:0">Outgoing payment: ${esc(d.outgoingPayment)}</p>` : ''}

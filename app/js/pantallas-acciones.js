@@ -1,6 +1,6 @@
 // Cobrar (mi QR), Pagar (escanear o pegar), Enviar al exterior, Retirar en efectivo y seguimiento de un pago.
 import { icono } from './iconos.js';
-import { esc, dinero, aUnidadMinima, formatearCampoMonto, horaRestante, toast, conEspera, abrirHoja, copiar, qrSvg, enmascarar } from './ui.js';
+import { nombreDestino, esc, dinero, aUnidadMinima, formatearCampoMonto, horaRestante, toast, conEspera, abrirHoja, copiar, qrSvg, enmascarar } from './ui.js';
 import { chipEstado, comprobanteHtml } from './pantallas-cuenta.js';
 import * as unToque from './un-toque.js';
 
@@ -305,7 +305,7 @@ export async function pago({ raiz, api, vigente }, pagoId) {
                     ${!listo && !mal ? '<p class="suave" style="margin-top:12px">Se abrió una ventana de tu billetera. Cuando aceptes, esta pantalla se actualiza sola.</p>' : ''}
                     ${mal && p.error ? `<p class="suave" style="margin-top:12px">${esc(p.error)}</p>` : ''}
                 </div>
-                <dl class="datos">${(p.destinos ?? []).map((d) => `<div><dt>Para</dt><dd>${esc(d.nombre ?? '')} · ${esc(dinero(d.monto))}</dd></div>`).join('')}</dl>
+                <dl class="datos">${(p.destinos ?? []).map((d) => `<div><dt>Para</dt><dd>${esc(nombreDestino(d.nombre))} · ${esc(dinero(d.monto))}</dd></div>`).join('')}</dl>
                 <details class="comprobante"><summary>${icono('escudo', 'chev')}&nbsp; Comprobante de Open Payments</summary>${comprobanteHtml(p)}</details>
             </section>
             <div class="pila-abajo"><a class="boton" href="#/inicio">${listo ? 'Listo' : 'Volver al inicio'}</a></div>`;

@@ -13,7 +13,7 @@ export function dinero(monto) {
     const decimales = Number.isInteger(valor) ? 0 : Math.min(escala, 2);
     const numero = valor.toLocaleString('es-CO', { minimumFractionDigits: decimales, maximumFractionDigits: decimales });
     const codigo = monto.assetCode ?? 'COP';
-    return `${SIMBOLOS[codigo] ?? codigo} ${numero}`;
+    return `${SIMBOLOS[codigo] ?? codigo}\u00a0${numero}`;
 }
 
 // Lo que escribe la persona ("3.000", "3000,50") → valor entero en la unidad mínima.
@@ -78,6 +78,16 @@ export function monedaGuardada(wallet) {
         if (guardada?.assetCode && (!wallet || guardada.wallet === wallet)) return { assetCode: guardada.assetCode, assetScale: Number(guardada.assetScale ?? 2) };
     } catch { /* sin dato */ }
     return null;
+}
+
+// Nombre de cada destino de un pago repartido. El backend usa los nombres internos del reparto (los de la demo);
+// en la app se muestran generales.
+export function nombreDestino(nombre) {
+    const n = String(nombre ?? '');
+    if (n === 'Proveedor') return 'Abono a deuda';
+    if (n === 'Ahorro') return 'Ahorro';
+    const persona = n.match(/^Mesero (\d+)$/);
+    return persona ? `Extra compartido · persona ${persona[1]}` : n;
 }
 
 // ---------- Toasts ----------
