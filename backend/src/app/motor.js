@@ -45,7 +45,10 @@ export async function iniciarPago(plan) {
         destinos.push({ ...destino, walletUrl: wallet.id, monto, cobroId, compartido: Boolean(destino.cobroId) });
     }
 
-    const tope = { value: sumar(destinos).toString(), assetCode: pagador.assetCode, assetScale: pagador.assetScale };
+    const total = plan.cotizar
+        ? destinos.reduce((suma, destino) => suma + BigInt(destino.debito.value), 0n)
+        : sumar(destinos);
+    const tope = { value: total.toString(), assetCode: pagador.assetCode, assetScale: pagador.assetScale };
 
     // Pagos rápidos (H5c): con permiso vigente y tope suficiente, la compra sale sin pantalla de consentimiento.
     const rapido = pagosRapidos.permisoUsable(plan.clienteId, pagador.id, tope.value);
@@ -90,7 +93,9 @@ async function pagarDestinos(pago, token, renovar) {
         try {
             // Un cobro compartido (cajita, deuda del proveedor) recibe de muchas ventas: se anota cuánto tenía antes.
             const recibidoAntes = destino.compartido ? (await op.consultarCobro(destino.cobroId)).recibido.value : undefined;
-            const pagarCon = (t) => op.pagar({ walletUrl: pago.pagador, token: t, cobroId: destino.cobroId, monto: destino.monto });
+            const pagarCon = (t) => (destino.quoteId
+                ? op.pagarConCotizacion({ walletUrl: pago.pagador, token: t, quoteId: destino.quoteId })
+                : op.pagar({ walletUrl: pago.pagador, token: t, cobroId: destino.cobroId, monto: destino.monto }));
             let saliente;
             try {
                 saliente = await pagarCon(token);
