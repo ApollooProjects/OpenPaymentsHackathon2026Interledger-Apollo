@@ -173,7 +173,8 @@ function filaARetiro(fila) {
         vence: fila.vence,
         estado: fila.estado,
         pagoOpId: fila.pago_op_id,
-        error: fila.error
+        error: fila.error,
+        creado: fila.creado
     };
 }
 
@@ -275,6 +276,11 @@ export function pagosHacia(walletUrl) {
         WHERE EXISTS (SELECT 1 FROM json_each(p.plan, '$.destinos') d WHERE json_extract(d.value, '$.walletUrl') = ?)
         ORDER BY p.creado DESC
     `).all(walletUrl).map(filaAPago);
+}
+
+// Pagos que hizo esa wallet (app producto: lo que ha enviado quien tiene billetera).
+export function pagosDesde(walletUrl) {
+    return db.prepare('SELECT * FROM pagos WHERE pagador = ? ORDER BY creado DESC').all(walletUrl).map(filaAPago);
 }
 
 export function repartosDelProveedor(walletUrl) {
