@@ -28,6 +28,9 @@ const POR_CONTEXTO = {
 export function mensajeParaUsuario(error, contexto = 'pago') {
     const mensaje = String(error?.message ?? error ?? '');
     if (INTERNOS[mensaje]) return INTERNOS[mensaje];
+    if (/timed out/i.test(String(error?.description ?? ''))) return 'La red de pagos tardó en responder. Intenta de nuevo en un momento';
+    // En el retiro, un 403 que sigue después de rotar el token es el permiso de la Custodia que no alcanza (tope).
+    if (contexto === 'retiro' && error?.status === 403) return 'El retiro supera el cupo del permiso de la Custodia. El dinero sigue a tu nombre: avisa al equipo de La Cajita';
     const metodo = /Open Payments (GET|POST|DELETE)/.exec(mensaje)?.[1];
     const textos = POR_CONTEXTO[contexto] ?? POR_CONTEXTO.pago;
     if (metodo) return textos[metodo] ?? textos.POST;

@@ -15,7 +15,9 @@ export async function obtenerCliente() {
         cliente = createAuthenticatedClient({
             walletAddressUrl: OP_CLIENT_WALLET_ADDRESS,
             keyId: OP_KEY_ID,
-            privateKey: path.resolve(raiz, OP_PRIVATE_KEY_PATH)
+            privateKey: path.resolve(raiz, OP_PRIVATE_KEY_PATH),
+            // Listar los cobros de la Custodia (paginado) tarda más que los 5 s por defecto del SDK en el testnet.
+            requestTimeoutMs: 20000
         });
     }
     return cliente;
